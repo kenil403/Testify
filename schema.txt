@@ -1,0 +1,8 @@
+User Schema:
+- fullname
+- mobile number
+- department
+- email address
+- password
+
+Note: JWT (JSON Web Token) will be used for authentication. Ensure the schema supports unique email addresses and secure password storage (hashed). Add fields for JWT token management if needed (e.g., refresh tokens).

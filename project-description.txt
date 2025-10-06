@@ -1,0 +1,11 @@
+Project Description:
+
+This project is a mock test learning platform designed for students. It provides access to a variety of learning PDFs and resources, allowing students to study and prepare for exams. The platform offers features such as:
+
+- Access to categorized learning PDFs and documents
+- Mock tests for exam practice
+- Practice tests for self-assessment
+- View solutions after giving tests
+- User authentication and personalized dashboards
+
+The goal is to help students efficiently prepare for exams by combining study materials, interactive testing, and solution review in one place.
