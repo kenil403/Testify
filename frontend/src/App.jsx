@@ -5,6 +5,7 @@ import Footer from "./components/layout/Footer.jsx";
 // Pages
 import HomePage from "./pages/HomePage.jsx";
 import AuthPage from "./pages/AuthPage.jsx";
+import apiAuth from "./api/auth.js";
 import LearnPage from "./pages/LearnPage.jsx";
 import LearnContentPage from "./pages/LearnContentPage.jsx";
 import TestSelectionPage from "./pages/TestSelectionPage.jsx";
@@ -72,8 +73,8 @@ export default function App() {
     navigate("test-instructions");
   };
 
-  const handleLogin = (email, password) => {
-    // Admin login credentials
+  const handleLogin = async (email, password) => {
+    // Admin local fallback
     if (email === "admin123@gmail.com" && password === "Admin@123") {
       setCurrentUser({ 
         name: "Admin User", 
@@ -83,31 +84,33 @@ export default function App() {
         role: "Admin"
       });
       navigate("admin-dashboard");
+      return;
     }
-    // Student login credentials
-    else if (email === "kenilshah403@gmail.com" && password === "Kenil@403") {
-      setCurrentUser({ 
-        name: "Kenil Shah", 
-        email: "kenilshah403@gmail.com", 
-        department: "Computer Engineering",
-        mobile: "9876543210",
-        role: "Student"
-      });
-      navigate("HomePage");
-    } else {
-      alert("Invalid email or password. Please try again.");
+
+    try {
+      const data = await apiAuth.login({ email, password });
+      apiAuth.setToken(data.token);
+      setCurrentUser(data.user);
+      if (data.user && data.user.role === 'Admin') navigate('admin-dashboard');
+      else navigate('dashboard');
+    } catch (err) {
+      console.error(err);
+      alert(err?.response?.data?.message || 'Login failed');
     }
   };
 
-  const handleRegister = (name, email, password, department, mobile, role) => {
-    setCurrentUser({ 
-      name, 
-      email, 
-      department, 
-      mobile, 
-      role 
-    });
-    navigate("home");
+  const handleRegister = async (name, email, password, department, mobile, role) => {
+    try {
+      const data = await apiAuth.register({ name, email, password, department, mobile, role });
+      apiAuth.setToken(data.token);
+      setCurrentUser(data.user);
+      if (data.user && data.user.role === 'Admin') navigate('admin-dashboard');
+      else navigate('dashboard');
+    } catch (err) {
+      console.error(err);
+      const msg = err?.response?.data?.message || (err?.response?.data?.errors ? err.response.data.errors.map(e=>e.msg).join(', ') : 'Register failed');
+      alert(msg);
+    }
   };
 
   const updateUserProfile = (updatedUser) => {

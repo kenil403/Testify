@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserIcon, UserAddIcon, EyeIcon, EyeSlashIcon } from '../components/icons/Icons';
+import apiAuth from '../api/auth';
 
 const AuthPage = ({ navigate, handleLogin, handleRegister }) => {
     const [isLoginView, setIsLoginView] = useState(true);
@@ -123,7 +124,7 @@ const AuthPage = ({ navigate, handleLogin, handleRegister }) => {
         return !Object.values(newErrors).some(error => error !== '');
     };
 
-    const handleFormSubmit = (e) => {
+    const handleFormSubmit = async (e) => {
         e.preventDefault();
         
         if (!validateAllFields()) {
@@ -131,9 +132,26 @@ const AuthPage = ({ navigate, handleLogin, handleRegister }) => {
         }
 
         if (isLoginView) {
-            handleLogin(email, password);
+            if (handleLogin) return handleLogin(email, password);
+            try {
+                const data = await apiAuth.login({ email, password });
+                apiAuth.setToken(data.token);
+                if (navigate) navigate('/dashboard');
+            } catch (err) {
+                console.error(err);
+                alert(err?.response?.data?.message || 'Login failed');
+            }
         } else {
-            handleRegister(name, email, password, department, mobile, role);
+            if (handleRegister) return handleRegister(name, email, password, department, mobile, role);
+            try {
+                const data = await apiAuth.register({ name, email, password, mobile, role, department });
+                apiAuth.setToken(data.token);
+                if (navigate) navigate('/dashboard');
+            } catch (err) {
+                console.error(err);
+                const msg = err?.response?.data?.message || (err?.response?.data?.errors ? err.response.data.errors.map(e=>e.msg).join(', ') : 'Register failed');
+                alert(msg);
+            }
         }
     };
 
