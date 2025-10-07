@@ -6,6 +6,7 @@ import Footer from "./components/layout/Footer.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import AuthPage from "./pages/AuthPage.jsx";
 import apiAuth from "./api/auth.js";
+import apiTests from "./api/tests.js";
 import LearnPage from "./pages/LearnPage.jsx";
 import LearnContentPage from "./pages/LearnContentPage.jsx";
 import TestSelectionPage from "./pages/TestSelectionPage.jsx";
@@ -113,6 +114,17 @@ export default function App() {
     }
   };
 
+  const addTestResult = async (category, score) => {
+    try {
+      const payload = { category, score };
+      const res = await apiTests.addTestResult(payload);
+      // update local state (prepend latest)
+      setCurrentUser(prev => ({ ...prev, testHistory: res.testHistory }));
+    } catch (err) {
+      console.error('Failed to save test result', err);
+    }
+  };
+
   const updateUserProfile = (updatedUser) => {
     setCurrentUser(updatedUser);
   };
@@ -178,7 +190,7 @@ export default function App() {
         navigate("test-instructions");
       }} />;
       case "test-instructions": return <TestInstructionsPage navigate={navigate} testState={testState} setTestState={setTestState} />;
-      case "test-area": return <TestAreaPage navigate={navigate} testState={testState} setTestState={setTestState} addTestResult={() => {}} selectedCategory={testState.selectedCategory || "Aptitude"} />;
+      case "test-area": return <TestAreaPage navigate={navigate} testState={testState} setTestState={setTestState} addTestResult={addTestResult} selectedCategory={testState.selectedCategory || "Aptitude"} />;
       case "test-result": return <TestResultPage 
         navigate={navigate} 
         testState={testState} 

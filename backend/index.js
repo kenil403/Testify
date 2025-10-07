@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import connectDB from './db.js';
 import authRouter from './routes/auth.js';
+import testsRouter from './routes/tests.js';
 import verifyToken from './middleware/auth.js';
 
 dotenv.config();
@@ -33,6 +34,8 @@ connectDB();
 
 // Auth routes
 app.use('/api/auth', authRouter);
+// Tests routes
+app.use('/api/tests', testsRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
