@@ -13,10 +13,12 @@ const TestSelectionPage = ({ navigate, setTestState }) => {
                 </button>
             </div>
             <h1 className="text-4xl font-bold mb-4">Test Center</h1>
-            <p className="text-lg text-slate-600 mb-12 max-w-3xl mx-auto">Choose a section to begin your practice test. Each test consists of 10 questions to challenge your knowledge.</p>
+            <p className="text-lg text-slate-600 mb-8 max-w-3xl mx-auto">Choose a section to begin your practice test. Aptitude tests have 60 questions, while other tests have 10 questions each.</p>
             
+            {/* Learning Section (Problem on Trains card removed) */}
+
+            {/* Main Test Categories */}
             <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-                {/* Section 1: Aptitude */}
                 <div 
                     onClick={() => { setTestState(prev => ({...prev, selectedCategory: 'Aptitude'})); navigate('test-instructions'); }} 
                     className="bg-white p-8 rounded-lg shadow-lg cursor-pointer hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border-t-4 border-amber-400 group"

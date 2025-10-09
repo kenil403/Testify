@@ -20,12 +20,12 @@ import AdminDashboard from "./Admin/AdminDashboard.jsx";
 import AboutUsPage from "./pages/AboutUsPage.jsx";
 import ContactUsPage from "./pages/ContactUsPage.jsx";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx";
-import AptitudeSolutionPage from "./pages/AptitudeSolutionPage.jsx";
 import TechnicalSolutionPage from "./pages/TechnicalSolutionPage.jsx";
 
 export default function App() {
   const [page, setPage] = useState("home");
   const [currentUser, setCurrentUser] = useState(null);
+  const [appServerError, setAppServerError] = useState('');
   const [testState, setTestState] = useState({
     started: false,
     finished: false,
@@ -58,9 +58,15 @@ export default function App() {
   const startPracticeTest = ({ topic, returnPage }) => {
     // Always reset test state first
     resetTestState();
-    
-    // Determine question count based on topic
-    const questionCount = topic === 'Aptitude' ? 60 : 10;
+    let questionCount = 10; // Default to 10 questions
+    let nextReturnPage = returnPage;
+    if (topic === 'Aptitude') {
+      questionCount = 60;
+      nextReturnPage = 'test-selection'; // Always go back to test-selection for Aptitude
+    }
+    if (topic === 'Problem on Trains Practice') {
+      questionCount = 30; // Practice test always has 30 questions
+    }
     setTestState({
       started: false,
       finished: false,
@@ -69,7 +75,8 @@ export default function App() {
       markedForReview: Array(questionCount).fill(false),
       score: 0,
       selectedCategory: topic,
-      returnPage
+      returnPage: nextReturnPage,
+      testQuestions: null // Will be seeded in TestAreaPage
     });
     navigate("test-instructions");
   };
@@ -96,7 +103,7 @@ export default function App() {
       else navigate('dashboard');
     } catch (err) {
       console.error(err);
-      alert(err?.response?.data?.message || 'Login failed');
+      setAppServerError(err?.response?.data?.message || 'Login failed');
     }
   };
 
@@ -110,7 +117,7 @@ export default function App() {
     } catch (err) {
       console.error(err);
       const msg = err?.response?.data?.message || (err?.response?.data?.errors ? err.response.data.errors.map(e=>e.msg).join(', ') : 'Register failed');
-      alert(msg);
+      setAppServerError(msg);
     }
   };
 
@@ -164,6 +171,8 @@ export default function App() {
           navigate={navigate}
           handleLogin={handleLogin}
           handleRegister={handleRegister}
+          appServerError={appServerError}
+          setAppServerError={setAppServerError}
         />
       );
       case "profile": return (
@@ -189,11 +198,12 @@ export default function App() {
         });
         navigate("test-instructions");
       }} />;
-      case "test-instructions": return <TestInstructionsPage navigate={navigate} testState={testState} setTestState={setTestState} />;
-      case "test-area": return <TestAreaPage navigate={navigate} testState={testState} setTestState={setTestState} addTestResult={addTestResult} selectedCategory={testState.selectedCategory || "Aptitude"} />;
+      case "test-instructions": return <TestInstructionsPage navigate={navigate} testState={testState} setTestState={setTestState} currentUser={currentUser} />;
+      case "test-area": return <TestAreaPage navigate={navigate} testState={testState} setTestState={setTestState} addTestResult={addTestResult} selectedCategory={testState.selectedCategory || "Aptitude"} currentUser={currentUser} />;
       case "test-result": return <TestResultPage 
         navigate={navigate} 
         testState={testState} 
+        currentUser={currentUser}
         resetTest={() => setTestState({
           started: false,
           finished: false,
@@ -208,7 +218,6 @@ export default function App() {
       case "contact": return <ContactUsPage navigate={navigate} />;
       case "privacy-policy": return <PrivacyPolicyPage navigate={navigate} />;
       case "technical-solutions": return <TechnicalSolutionPage navigate={navigate} />;
-      case "aptitude-solutions": return <AptitudeSolutionPage navigate={navigate} />;
       default: return <HomePage navigate={navigate} />;
     }
   };

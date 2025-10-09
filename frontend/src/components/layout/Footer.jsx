@@ -5,7 +5,7 @@ export default function Footer({ navigate }) {
         {/* Logo + Description */}
         <div>
           <h3 className="text-2xl font-bold text-green-500">
-            Placify<span className="text-amber-400">.</span>
+            Testify<span className="text-amber-400">.</span>
           </h3>
           <p className="text-slate-400 mt-2 text-sm">
             Your one-stop platform for cracking placement exams. Learn,
@@ -39,7 +39,7 @@ export default function Footer({ navigate }) {
 
       {/* Bottom */}
       <div className="text-center text-slate-500 border-t border-slate-700 mt-8 pt-4 text-sm">
-        © {new Date().getFullYear()} Placify. All Rights Reserved.
+        © {new Date().getFullYear()} Testify. All Rights Reserved.
       </div>
     </footer>
   );

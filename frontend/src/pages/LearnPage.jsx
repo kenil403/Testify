@@ -5,7 +5,7 @@ const LearnPage = ({ navigate }) => {
     const mainCategories = [
         { name: 'Aptitude', description: 'Sharpen your quantitative and problem-solving skills.', icon: <LightBulbIcon />, color: 'amber' },
         { name: 'Reasoning', description: 'Enhance your analytical and logical thinking abilities.', icon: <BrainIcon />, color: 'purple' },
-        { name: 'Programming', description: 'Master essential languages for technical interviews.', icon: <ClipboardListIcon />, color: 'green' },
+        { name: 'Programming', description: 'Master essential languages for technical interviews.', icon: <ClipboardListIcon />, color: 'black' },
         { name: 'Database', description: 'Understand SQL, NoSQL, and core database concepts.', icon: <DatabaseIcon />, color: 'cyan' },
         { name: 'Networking', description: 'Learn about network layers, protocols, and models.', icon: <NetworkIcon />, color: 'indigo' },
         { name: 'Software Testing', description: 'Explore manual, automation, and lifecycle concepts.', icon: <TestIcon />, color: 'rose' },
@@ -29,6 +29,7 @@ const LearnPage = ({ navigate }) => {
                     Welcome to the central hub for all your learning materials. Dive into our curated content designed to help you excel. Select a category below to start exploring the topics.
                 </p>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {mainCategories.map(cat => (
                     <div 

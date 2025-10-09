@@ -2,16 +2,25 @@ import React, { useState } from 'react';
 import { ChevronLeftIcon } from '../components/icons/Icons';
 import { topicQuestionBank } from '../data/topicQuestionBank';
 
-const TestInstructionsPage = ({ navigate, setTestState, testState }) => {
+const TestInstructionsPage = ({ navigate, setTestState, testState, currentUser }) => {
     const [agreed, setAgreed] = useState(false);
     
     // Determine test configuration based on selected category
     const getTestConfig = () => {
-        if (testState?.selectedCategory === 'Aptitude') {
+        const category = testState?.selectedCategory || window.testCategory;
+        
+        if (category === 'Aptitude') {
             return {
                 time: "60 minutes",
                 questions: "60 questions",
                 description: "This is a comprehensive aptitude test covering various topics including quantitative ability, logical reasoning, and problem-solving skills."
+            };
+        }
+        if (category === 'Problem on Trains Practice') {
+            return {
+                time: "30 minutes",
+                questions: "30 MCQs",
+                description: "Practice Test: 30 MCQs on Problems on Trains. You have 30 minutes to complete the test. Each question has 4 options, only one is correct. Solutions and explanations are shown after the test."
             };
         }
         return {
@@ -24,6 +33,21 @@ const TestInstructionsPage = ({ navigate, setTestState, testState }) => {
     const config = getTestConfig();
     
     const handleBack = () => {
+        const category = testState?.selectedCategory || window.testCategory;
+        
+        // Always go to test-selection for Aptitude
+        if (category === 'Aptitude') {
+            navigate('test-selection');
+            return;
+        }
+        
+        // For Problem on Trains Practice, go back to learn page
+        if (category === 'Problem on Trains Practice') {
+            navigate(testState?.returnPage || 'learn-Apptitude__Problems_on_Trains');
+            return;
+        }
+        
+        // For other tests, use returnPage or fallback to test-selection
         if (testState && testState.returnPage) {
             navigate(testState.returnPage);
         } else {
@@ -48,6 +72,7 @@ const TestInstructionsPage = ({ navigate, setTestState, testState }) => {
                     <li>The test will be submitted automatically once the time is over.</li>
                     <li>You can navigate between questions using the question palette.</li>
                     {testState?.selectedCategory === 'Aptitude' && <li>Questions cover topics like trains, time-distance, work, percentage, profit-loss, and interests.</li>}
+                    {testState?.selectedCategory === 'Problem on Trains' && <li>Questions are sourced from the uploaded practice paper in <code>practiceTestBank.js</code> and include explanations after the test.</li>}
                 </ul>
                 <div className="mt-8 pt-6 border-t">
                     <label className="flex items-center">
@@ -59,10 +84,28 @@ const TestInstructionsPage = ({ navigate, setTestState, testState }) => {
                      <button 
                         onClick={() => {
                             // Build the exact bank to be used for this attempt
-                            const category = testState?.selectedCategory;
+                            const category = testState?.selectedCategory || window.testCategory;
                             const source = category && topicQuestionBank[category];
-                            const bank = typeof source === 'function' ? source() : (source || []);
-                            const questionCount = bank.length || (category === 'Aptitude' ? 60 : 10);
+                            // For Problems on Trains Practice, always use exactly 30 questions
+                            let bank = [];
+                            if (category === 'Problem on Trains Practice') {
+                                try {
+                                    const { practiceTests } = require('../data/practiceTestBank');
+                                    if (practiceTests && practiceTests['Problem on Trains'] && practiceTests['Problem on Trains'].questions) {
+                                        bank = practiceTests['Problem on Trains'].questions.slice(0, 30);
+                                    }
+                                } catch (e) {}
+                            } else {
+                                bank = typeof source === 'function' ? source(currentUser?.email) : (source || []);
+                            }
+                            const questionCount = category === 'Problem on Trains Practice' ? 30 : 
+                                                category === 'Aptitude' ? 60 : 
+                                                bank.length || 10;
+
+                            // Clear window.testCategory after using it
+                            if (window.testCategory) {
+                                window.testCategory = null;
+                            }
 
                             // Fully reset state and seed attempt-specific questions
                             setTestState({
@@ -74,7 +117,8 @@ const TestInstructionsPage = ({ navigate, setTestState, testState }) => {
                                 score: 0,
                                 selectedCategory: category,
                                 returnPage: testState?.returnPage,
-                                testQuestions: bank
+                                testQuestions: bank,
+                                testId: Date.now() // Add unique test ID
                             });
                             navigate('test-area');
                         }}

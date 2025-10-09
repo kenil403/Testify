@@ -19,7 +19,12 @@ const LearnContentPage = ({ pathParts, navigate, startPracticeTest }) => {
 
     const data = get_current_data(pathParts);
 
-    const isFinalLevel = Array.isArray(data);
+    // Special handling for Problem on Trains
+    const isProblemOnTrains = pathParts.length === 2 && 
+                             pathParts[0] === 'Aptitude' && 
+                             pathParts[1] === 'Problem on Trains';
+
+    const isFinalLevel = Array.isArray(data) || isProblemOnTrains;
 
     // Breadcrumb Navigation
     const breadcrumbs = [...pathParts];
@@ -32,9 +37,17 @@ const LearnContentPage = ({ pathParts, navigate, startPracticeTest }) => {
     const title = pathParts.length > 0 ? pathParts[pathParts.length - 1].replace(/__/g, ' ') : "Learning Center";
 
     const handleStartPractice = () => {
-        const topic = pathParts.join(' / ');
+        // Always use the correct topic and redirect for Problems on Trains Practice
+        const topic = isProblemOnTrains ? 'Problem on Trains Practice' : pathParts.join(' / ');
         const returnPage = `learn-${pathParts.map(encodeURIComponent).join('__')}`;
-        if (startPracticeTest) startPracticeTest({ topic, returnPage });
+        if (startPracticeTest) {
+            // Always reset and launch the correct test flow
+            startPracticeTest({ topic, returnPage });
+        } else {
+            window.testCategory = topic;
+            window.testReturnPage = returnPage;
+            navigate('test-instructions');
+        }
     };
     
     return (
@@ -54,33 +67,86 @@ const LearnContentPage = ({ pathParts, navigate, startPracticeTest }) => {
             </nav>
             
             <div className="bg-white p-8 rounded-lg shadow-lg">
-                 <div className="md:flex justify-between items-start mb-8">
+                <div className="md:flex justify-between items-start mb-8">
                     <div>
                         <h1 className="text-3xl font-bold mb-2">{title}</h1>
                         <div className="w-20 h-1 bg-green-500"></div>
                     </div>
-                    {isFinalLevel && (
-                        <button onClick={handleStartPractice} className="mt-4 md:mt-0 inline-flex items-center px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors">
-                            Practice Test
-                        </button>
+                    {/* Show buttons in all subsections of any main section (length 2, data is array) */}
+                    {pathParts.length === 2 && Array.isArray(data) && (
+                        <div className="flex flex-col gap-2">
+                            <button onClick={handleStartPractice} className="inline-flex items-center px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors">
+                                Practice Test
+                            </button>
+                        </div>
                     )}
                 </div>
 
                 {isFinalLevel ? (
                     // Final Level: Display item with actions: Practice Test (primary) and Download PDF (secondary)
-                    <ul className="space-y-3">
-                        {data.map(item => (
-                            <li key={item.name} className="flex items-center justify-between p-4 rounded-md bg-slate-50 hover:bg-green-100 transition-colors">
-                                <a href={item.path} target="_blank" rel="noopener noreferrer" className="flex items-center min-w-0">
-                                    <PdfIcon />
-                                    <span className="ml-4 font-medium text-slate-700 truncate">{item.name}</span>
-                                </a>
-                                <div className="ml-4">
-                                    <a href={item.path} download className="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 font-semibold">Download PDF</a>
+                    isProblemOnTrains ? (
+                        // Special content for Problem on Trains
+                        <div className="space-y-6">
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                                <h3 className="text-xl font-bold text-blue-800 mb-4">📚 Study Materials</h3>
+                                <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-blue-300">
+                                    <div className="flex items-center">
+                                        <PdfIcon />
+                                        <span className="ml-4 font-medium text-slate-700">Problem on Trains Study Guide</span>
+                                    </div>
+                                    <a 
+                                        href="/project-papers/Problem on trains2.pdf" 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 font-semibold"
+                                    >
+                                        Download PDF
+                                    </a>
                                 </div>
-                            </li>
-                        ))}
-                    </ul>
+                            </div>
+                            
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                                <h3 className="text-xl font-bold text-green-800 mb-4">🎯 Practice Test</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                    <div className="bg-white p-3 rounded-lg border border-green-300">
+                                        <span className="text-sm text-green-600 font-semibold">Questions</span>
+                                        <div className="text-lg font-bold text-green-800">30</div>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-lg border border-green-300">
+                                        <span className="text-sm text-green-600 font-semibold">Duration</span>
+                                        <div className="text-lg font-bold text-green-800">30 min</div>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-lg border border-green-300">
+                                        <span className="text-sm text-green-600 font-semibold">Topics</span>
+                                        <div className="text-lg font-bold text-green-800">All Types</div>
+                                    </div>
+                                </div>
+                                <p className="text-green-700 mb-4">
+                                    Comprehensive practice test covering speed conversion, train crossing problems, relative speed, and more.
+                                </p>
+                                <button
+                                    onClick={handleStartPractice}
+                                    className="mt-2 px-6 py-3 rounded-lg bg-green-600 text-white font-bold hover:bg-green-700 transition-colors text-lg"
+                                >
+                                    Start Practice Test
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <ul className="space-y-3">
+                            {data.map(item => (
+                                <li key={item.name} className="flex items-center justify-between p-4 rounded-md bg-slate-50 hover:bg-green-100 transition-colors">
+                                    <a href={item.path} target="_blank" rel="noopener noreferrer" className="flex items-center min-w-0">
+                                        <PdfIcon />
+                                        <span className="ml-4 font-medium text-slate-700 truncate">{item.name}</span>
+                                    </a>
+                                    <a href={item.path} download className="inline-flex items-center px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 font-semibold ml-4">
+                                        Download PDF
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    )
                 ) : (
                     // Intermediate Level: Display folder links
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -92,6 +158,8 @@ const LearnContentPage = ({ pathParts, navigate, startPracticeTest }) => {
                         ))}
                     </div>
                 )}
+                {/* Show Problem on Trains card in every Aptitude sub-section except Problems on Trains itself */}
+                {/* Problem on Trains special card removed as requested */}
             </div>
         </div>
     );

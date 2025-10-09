@@ -2,10 +2,33 @@ import React, { useState } from 'react';
 import { ChevronLeftIcon } from '../components/icons/Icons';
 import { sampleMCQs } from '../data/sampleMCQs';
 import { topicQuestionBank } from '../data/topicQuestionBank';
+import { getUserAssignedPaper, recordTestCompletion } from '../services/paperAssignment';
 
-const TestResultPage = ({ navigate, testState, resetTest }) => {
+const TestResultPage = ({ navigate, testState, resetTest, currentUser }) => {
     const { answers, score, selectedCategory, testQuestions } = testState;
     const markedForReview = testState?.markedForReview || [];
+    
+    // Record test completion when component mounts
+    React.useEffect(() => {
+        if (currentUser && selectedCategory === 'Aptitude' && score !== undefined) {
+            const currentPaper = localStorage.getItem(`user_${currentUser.email}_current_paper`) || 'paper1';
+            
+            // Check if this test is already recorded to avoid duplicates
+            const testHistoryKey = `user_${currentUser.email}_test_history`;
+            const existingTests = JSON.parse(localStorage.getItem(testHistoryKey) || '[]');
+            
+            // Only record if this test hasn't been recorded yet
+            const isAlreadyRecorded = existingTests.some(test => 
+                test.testId === testState.testId || 
+                (test.paper === currentPaper && test.category === selectedCategory && 
+                 Math.abs(new Date(test.date) - new Date()) < 60000) // Within 1 minute
+            );
+            
+            if (!isAlreadyRecorded) {
+                recordTestCompletion(currentUser.email, currentPaper, score, selectedCategory, testState.testId);
+            }
+        }
+    }, [currentUser, selectedCategory, score]);
     
     // Use the exact questions that were used in the test
     const getTestBank = () => {
@@ -14,7 +37,7 @@ const TestResultPage = ({ navigate, testState, resetTest }) => {
         }
         // Fallback to fresh questions if testQuestions not available
         if (selectedCategory === 'Aptitude') {
-            return topicQuestionBank[selectedCategory]();
+            return topicQuestionBank[selectedCategory](currentUser?.email);
         }
         return topicQuestionBank[selectedCategory] || sampleMCQs;
     };
@@ -150,14 +173,27 @@ const TestResultPage = ({ navigate, testState, resetTest }) => {
                     <p className="text-xl text-amber-800">You Scored</p>
                     <p className="text-7xl font-bold text-amber-900">{score}<span className="text-4xl">/{bankData.length}</span></p>
                 </div>
-                <div className="flex justify-center space-x-4">
+                <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
                     <button 
                         onClick={() => setShowSolutions(true)} 
                         className="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700"
                     >
                         View Solutions
                     </button>
-                    <button onClick={() => { resetTest(); navigate(testState && testState.returnPage ? testState.returnPage : 'test-selection'); }} className="px-6 py-3 bg-slate-200 text-slate-800 font-bold rounded-lg hover:bg-slate-300">Take Another Test</button>
+                    <button
+                        onClick={() => {
+                            resetTest();
+                            // Always redirect to test-selection for Technical test
+                            if (testState?.selectedCategory === 'Technical') {
+                                navigate('test-selection');
+                            } else {
+                                navigate(testState && testState.returnPage ? testState.returnPage : 'test-selection');
+                            }
+                        }}
+                        className="px-6 py-3 bg-slate-200 text-slate-800 font-bold rounded-lg hover:bg-slate-300"
+                    >
+                        Take Another Test
+                    </button>
                 </div>
             </div>
         </div>

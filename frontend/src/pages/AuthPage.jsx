@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { UserIcon, UserAddIcon, EyeIcon, EyeSlashIcon } from '../components/icons/Icons';
 import apiAuth from '../api/auth';
 
-const AuthPage = ({ navigate, handleLogin, handleRegister }) => {
+const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAppServerError }) => {
     const [isLoginView, setIsLoginView] = useState(true);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -13,6 +13,10 @@ const AuthPage = ({ navigate, handleLogin, handleRegister }) => {
     const [department, setDepartment] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    // Server-side / submission error - prefer app-level error if provided
+    const [localServerError, setLocalServerError] = useState('');
+    const serverError = appServerError !== undefined ? appServerError : localServerError;
+    const setServerError = setAppServerError !== undefined ? setAppServerError : setLocalServerError;
     
     // Enhanced error states
     const [errors, setErrors] = useState({
@@ -126,7 +130,8 @@ const AuthPage = ({ navigate, handleLogin, handleRegister }) => {
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
-        
+    // clear previous server errors
+    setServerError('');
         if (!validateAllFields()) {
             return;
         }
@@ -139,7 +144,8 @@ const AuthPage = ({ navigate, handleLogin, handleRegister }) => {
                 if (navigate) navigate('/dashboard');
             } catch (err) {
                 console.error(err);
-                alert(err?.response?.data?.message || 'Login failed');
+                const msg = err?.response?.data?.message || (err?.response?.data?.errors ? err.response.data.errors.map(e=>e.msg).join(', ') : 'Login failed');
+                setServerError(msg);
             }
         } else {
             if (handleRegister) return handleRegister(name, email, password, department, mobile, role);
@@ -150,7 +156,7 @@ const AuthPage = ({ navigate, handleLogin, handleRegister }) => {
             } catch (err) {
                 console.error(err);
                 const msg = err?.response?.data?.message || (err?.response?.data?.errors ? err.response.data.errors.map(e=>e.msg).join(', ') : 'Register failed');
-                alert(msg);
+                setServerError(msg);
             }
         }
     };
@@ -165,6 +171,8 @@ const AuthPage = ({ navigate, handleLogin, handleRegister }) => {
             mobile: '',
             department: ''
         });
+        // clear server errors when switching view
+        setServerError('');
     }
 
     return (
@@ -176,6 +184,16 @@ const AuthPage = ({ navigate, handleLogin, handleRegister }) => {
                     </div>
                     <h1 className="text-2xl font-bold mb-2 text-slate-800 text-center">{isLoginView ? 'Welcome Back!' : 'Create an Account'}</h1>
                     <p className="text-slate-500 mb-8 text-center">{isLoginView ? 'Log in to continue your journey.' : 'Join Placify and start preparing!'}</p>
+                    {/* Server-side error banner */}
+                    {serverError && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
+                            <div className="flex items-start justify-between">
+                                <div className="text-sm text-red-700">{serverError}</div>
+                                <button type="button" onClick={() => setServerError('')} className="text-red-500 font-bold px-2">X</button>
+                            </div>
+                        </div>
+                    )}
+
                     <form onSubmit={handleFormSubmit} className="space-y-4">
                         {!isLoginView && (
                             <>
@@ -188,7 +206,7 @@ const AuthPage = ({ navigate, handleLogin, handleRegister }) => {
                                         className={`w-full p-3 border rounded-md focus:ring-2 focus:ring-green-500 transition ${
                                             errors.name ? 'border-red-500' : 'border-gray-300'
                                         }`} 
-                                        placeholder="John Doe" 
+                                        placeholder="Enter your full name" 
                                         required 
                                     />
                                     {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}

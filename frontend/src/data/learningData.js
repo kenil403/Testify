@@ -2,8 +2,14 @@ export const learningData = {
     "Aptitude": {
         "Problems on Trains": [
             {
-                name: "Problems on Trains",
+                name: "Problems on Trains - Part 1",
                 path: "/project-papers/Apptitude/Problems on Trains/Problems on Trains.pdf"
+
+            },
+            {
+
+                 name: "Problems on Trains - Part 2",
+                path: "/project-papers/Apptitude/Problems on Trains/Problems on Trains2.pdf"
             }
         ],
         // ... All other sections can remain as they are ...

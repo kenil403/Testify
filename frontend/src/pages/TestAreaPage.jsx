@@ -2,14 +2,41 @@ import React, { useState, useEffect } from 'react';
 import { sampleMCQs } from '../data/sampleMCQs';
 import { topicQuestionBank } from '../data/topicQuestionBank';
 
-const TestAreaPage = ({ navigate, setTestState, testState, addTestResult, selectedCategory }) => {
-    // For aptitude tests, use seeded paper when available; otherwise derive from bank
+const TestAreaPage = ({ navigate, setTestState, testState, addTestResult, selectedCategory, currentUser }) => {
+    // Always use the correct MCQs for Problems on Trains Practice
     const deriveBank = () => {
+        if (selectedCategory === 'Problem on Trains Practice') {
+            let trainsBank = topicQuestionBank[selectedCategory]();
+            // If for any reason the bank is empty, fallback to the uploaded MCQs directly
+            if (!trainsBank || trainsBank.length !== 30) {
+                try {
+                    const { practiceTests } = require('../data/practiceTestBank');
+                    if (practiceTests && practiceTests['Problem on Trains'] && practiceTests['Problem on Trains'].questions) {
+                        trainsBank = practiceTests['Problem on Trains'].questions.map(q => ({
+                            question: q.question,
+                            options: q.options,
+                            answer: q.answer,
+                            explanation: q.explanation
+                        }));
+                    }
+                } catch (e) {}
+            }
+            // If still not found, show a message instead of rendering nothing
+            if (!trainsBank || trainsBank.length === 0) {
+                return [{
+                    question: "Practice test for Problems on Trains is not available. Please contact admin.",
+                    options: [],
+                    answer: "",
+                    explanation: "No questions found."
+                }];
+            }
+            return trainsBank;
+        }
         if (testState?.testQuestions && Array.isArray(testState.testQuestions) && testState.testQuestions.length > 0) {
             return testState.testQuestions;
         }
         if (selectedCategory === 'Aptitude') {
-            return topicQuestionBank[selectedCategory]();
+            return topicQuestionBank[selectedCategory](currentUser?.email);
         }
         return topicQuestionBank[selectedCategory] || sampleMCQs;
     };
@@ -18,7 +45,9 @@ const TestAreaPage = ({ navigate, setTestState, testState, addTestResult, select
     const { currentQuestion, answers, markedForReview } = testState;
     
     // Set time based on test type: 60 minutes for aptitude, 1 minute per question for others
-    const totalTime = selectedCategory === 'Aptitude' ? 60 * 60 : 60 * bank.length;
+    const totalTime = selectedCategory === 'Aptitude' ? 60 * 60 : 
+                     selectedCategory === 'Problem on Trains Practice' ? 30 * 60 : 
+                     60 * bank.length;
     const [timeLeft, setTimeLeft] = useState(totalTime);
 
     // Store test questions when test starts if not yet stored
