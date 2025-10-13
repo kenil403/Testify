@@ -5,6 +5,8 @@ import Footer from "./components/layout/Footer.jsx";
 // Pages
 import HomePage from "./pages/HomePage.jsx";
 import AuthPage from "./pages/AuthPage.jsx";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
+import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import apiAuth from "./api/auth.js";
 import apiTests from "./api/tests.js";
 import LearnPage from "./pages/LearnPage.jsx";
@@ -164,6 +166,10 @@ export default function App() {
       const pathParts = pathString ? pathString.split("__").map(decodeURIComponent) : [];
       return <LearnContentPage pathParts={pathParts} navigate={navigate} startPracticeTest={startPracticeTest} />;
     }
+    if (page.startsWith("reset-password/")) {
+      const token = page.substring(15); // Extract token from "reset-password/token"
+      return <ResetPasswordPage navigate={navigate} token={token} />;
+    }
     switch (page) {
       case "home": return <HomePage navigate={navigate} />;
       case "auth": return (
@@ -175,6 +181,7 @@ export default function App() {
           setAppServerError={setAppServerError}
         />
       );
+      case "forgot-password": return <ForgotPasswordPage navigate={navigate} />;
       case "profile": return (
         <ProfilePage 
           navigate={navigate} 

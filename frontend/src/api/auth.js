@@ -25,4 +25,21 @@ export function getToken() {
   return localStorage.getItem('auth_token');
 }
 
-export default { register, login, setToken, getToken };
+export async function updateProfile(payload) {
+  const url = `${API_BASE}/api/auth/update-profile`;
+  const token = getToken();
+  
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+  
+  const res = await axios.put(url, payload, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  return res.data;
+}
+
+export default { register, login, setToken, getToken, updateProfile };

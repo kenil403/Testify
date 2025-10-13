@@ -19,7 +19,9 @@ const TestAreaPage = ({ navigate, setTestState, testState, addTestResult, select
                             explanation: q.explanation
                         }));
                     }
-                } catch (e) {}
+                } catch (e) {
+                    
+                }
             }
             // If still not found, show a message instead of rendering nothing
             if (!trainsBank || trainsBank.length === 0) {

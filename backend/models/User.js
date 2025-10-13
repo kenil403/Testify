@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema({
   mobile: { type: String },
   role: { type: String, enum: ['Student', 'Admin'], default: 'Student' },
   department: { type: String },
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Date },
   testHistory: [
     {
       category: String,

@@ -47,8 +47,42 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
 
     const validatePassword = (pass) => {
         if (!pass) return "Password is required.";
-        if (pass.length < 6) return "Password must be at least 6 characters long.";
+        if (pass.length < 8) return "Password must be at least 8 characters long.";
+        
+        // Check for at least one lowercase letter
+        if (!/[a-z]/.test(pass)) return "Password must contain at least one lowercase letter.";
+        
+        // Check for at least one uppercase letter
+        if (!/[A-Z]/.test(pass)) return "Password must contain at least one uppercase letter.";
+        
+        // Check for at least one number
+        if (!/\d/.test(pass)) return "Password must contain at least one number.";
+        
+        // Check for at least one special character - fixed regex
+        if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pass)) {
+            return "Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;':\",./<>?).";
+        }
+        
         return "";
+    };
+
+    const getPasswordStrength = (pass) => {
+        if (!pass) return { strength: 0, text: '', color: '' };
+        
+        let score = 0;
+        const checks = {
+            length: pass.length >= 8,
+            lowercase: /[a-z]/.test(pass),
+            uppercase: /[A-Z]/.test(pass),
+            numbers: /\d/.test(pass),
+            special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pass)
+        };
+        
+        score = Object.values(checks).filter(Boolean).length;
+        
+        if (score < 3) return { strength: score, text: 'Weak', color: 'text-red-500' };
+        if (score < 5) return { strength: score, text: 'Medium', color: 'text-yellow-500' };
+        return { strength: score, text: 'Strong', color: 'text-green-500' };
     };
 
     const validateMobile = (mobile) => {
@@ -293,6 +327,59 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
                                 </button>
                             </div>
                             {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+                            {isLoginView && (
+                                <div className="text-right mt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate && navigate('forgot-password')}
+                                        className="text-sm text-green-600 hover:underline font-semibold"
+                                    >
+                                        Forgot Password?
+                                    </button>
+                                </div>
+                            )}
+                            {!isLoginView && password && (
+                                <div className="mt-2">
+                                    <div className="flex items-center justify-between text-xs mb-1">
+                                        <span className="text-slate-600">Password Strength:</span>
+                                        <span className={`font-semibold ${getPasswordStrength(password).color}`}>
+                                            {getPasswordStrength(password).text}
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div
+                                            className={`h-2 rounded-full transition-all duration-300 ${
+                                                getPasswordStrength(password).strength < 3 
+                                                    ? 'bg-red-500' 
+                                                    : getPasswordStrength(password).strength < 5 
+                                                    ? 'bg-yellow-500' 
+                                                    : 'bg-green-500'
+                                            }`}
+                                            style={{ width: `${(getPasswordStrength(password).strength / 5) * 100}%` }}
+                                        ></div>
+                                    </div>
+                                    <div className="mt-2 text-xs text-slate-600">
+                                        <p>Password must contain:</p>
+                                        <ul className="list-disc list-inside mt-1 space-y-1">
+                                            <li className={password.length >= 8 ? 'text-green-600' : 'text-slate-500'}>
+                                                At least 8 characters
+                                            </li>
+                                            <li className={/[a-z]/.test(password) ? 'text-green-600' : 'text-slate-500'}>
+                                                One lowercase letter
+                                            </li>
+                                            <li className={/[A-Z]/.test(password) ? 'text-green-600' : 'text-slate-500'}>
+                                                One uppercase letter
+                                            </li>
+                                            <li className={/\d/.test(password) ? 'text-green-600' : 'text-slate-500'}>
+                                                One number
+                                            </li>
+                                            <li className={/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password) ? 'text-green-600' : 'text-slate-500'}>
+                                                One special character
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         {!isLoginView && (
                              <div>
