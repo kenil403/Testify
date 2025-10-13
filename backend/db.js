@@ -17,8 +17,13 @@ export async function connectDB() {
     });
     console.log('Connected to MongoDB');
   } catch (err) {
-    console.error('Failed to connect to MongoDB:', err.message || err);
-    process.exit(1);
+    // Log full error for diagnostics but do not crash the app; allow dev server to run without DB
+    console.error('Failed to connect to MongoDB:', err && err.message ? err.message : err);
+    if (err && err.stack) console.error(err.stack);
+    console.error('MongoDB URI:', MONGO_URI ? MONGO_URI.replace(/:(.*)@/, ':*****@') : 'not set');
+    console.error('Common causes: incorrect URI, network/DNS issues, IP not whitelisted in Atlas, or password requires URL-encoding.');
+    // Don't exit - return false to indicate connect failure
+    return false;
   }
 }
 

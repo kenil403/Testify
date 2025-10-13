@@ -23,6 +23,12 @@ import AboutUsPage from "./pages/AboutUsPage.jsx";
 import ContactUsPage from "./pages/ContactUsPage.jsx";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx";
 import TechnicalSolutionPage from "./pages/TechnicalSolutionPage.jsx";
+import MechanicalSolutionPage from "./pages/MechanicalSolutionPage.jsx";
+import ComputerSolutionPage from "./pages/ComputerSolutionPage.jsx";
+import ElectronicsSolutionPage from "./pages/ElectronicsSolutionPage.jsx";
+import ChemicalSolutionPage from "./pages/ChemicalSolutionPage.jsx";
+import CivilSolutionPage from "./pages/CivilSolutionPage.jsx";
+import ElectricalSolutionPage from "./pages/ElectricalSolutionPage.jsx";
 
 export default function App() {
   const [page, setPage] = useState("home");
@@ -53,7 +59,8 @@ export default function App() {
       score: 0,
       selectedCategory: null,
       returnPage: null,
-      testQuestions: null
+      testQuestions: null,
+      selectedPaperNumber: null
     });
   };
 
@@ -101,6 +108,17 @@ export default function App() {
       const data = await apiAuth.login({ email, password });
       apiAuth.setToken(data.token);
       setCurrentUser(data.user);
+      // Fetch and cache test history for paper assignment and dashboard
+      try {
+        const res = await apiTests.getTestHistory();
+        if (res && Array.isArray(res.testHistory)) {
+          // Cache to localStorage keyed by email for synchronous reads
+          localStorage.setItem(`user_${data.user.email}_test_history`, JSON.stringify(res.testHistory));
+          setCurrentUser(prev => ({ ...prev, testHistory: res.testHistory }));
+        }
+      } catch (e) {
+        console.warn('Could not fetch test history after login', e);
+      }
       if (data.user && data.user.role === 'Admin') navigate('admin-dashboard');
       else navigate('dashboard');
     } catch (err) {
@@ -114,6 +132,16 @@ export default function App() {
       const data = await apiAuth.register({ name, email, password, department, mobile, role });
       apiAuth.setToken(data.token);
       setCurrentUser(data.user);
+      // Try to fetch and cache history as well
+      try {
+        const res = await apiTests.getTestHistory();
+        if (res && Array.isArray(res.testHistory)) {
+          localStorage.setItem(`user_${data.user.email}_test_history`, JSON.stringify(res.testHistory));
+          setCurrentUser(prev => ({ ...prev, testHistory: res.testHistory }));
+        }
+      } catch (e) {
+        console.warn('Could not fetch test history after register', e);
+      }
       if (data.user && data.user.role === 'Admin') navigate('admin-dashboard');
       else navigate('dashboard');
     } catch (err) {
@@ -218,6 +246,7 @@ export default function App() {
           answers: Array(10).fill(null),
           markedForReview: Array(10).fill(false),
           score: 0,
+          selectedPaperNumber: testState?.selectedPaperNumber
         })}
       />;
       case "dashboard": return <DashboardPage navigate={navigate} user={currentUser} />;
@@ -225,6 +254,12 @@ export default function App() {
       case "contact": return <ContactUsPage navigate={navigate} />;
       case "privacy-policy": return <PrivacyPolicyPage navigate={navigate} />;
       case "technical-solutions": return <TechnicalSolutionPage navigate={navigate} />;
+      case "mechanical-solutions": return <MechanicalSolutionPage navigate={navigate} currentUser={currentUser} testState={testState} />;
+      case "computer-solutions": return <ComputerSolutionPage navigate={navigate} currentUser={currentUser} testState={testState} />;
+      case "electronics-solutions": return <ElectronicsSolutionPage navigate={navigate} currentUser={currentUser} testState={testState} />;
+      case "chemical-solutions": return <ChemicalSolutionPage navigate={navigate} currentUser={currentUser} testState={testState} />;
+      case "civil-solutions": return <CivilSolutionPage navigate={navigate} currentUser={currentUser} testState={testState} />;
+      case "electrical-solutions": return <ElectricalSolutionPage navigate={navigate} currentUser={currentUser} testState={testState} />;
       default: return <HomePage navigate={navigate} />;
     }
   };

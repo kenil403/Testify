@@ -51,10 +51,22 @@ export const learningData = {
             { name: "Problems on Ages - Part 1", path: "/project-papers/Apptitude/Problems on Ages/Problems on Ages1.pdf" },
             { name: "Problems on Ages - Part 2", path: "/project-papers/Apptitude/Problems on Ages/Problems on Ages2.pdf" }
         ],
-        "Calendar": [{ name: "Tricks & Formulas PDF", path: "/pdfs/placeholder.pdf" }],
-        "Clock": [{ name: "Angle & Time Problems PDF", path: "/pdfs/placeholder.pdf" }],
-        "Average": [{ name: "Concepts & Formulas PDF", path: "/pdfs/placeholder.pdf" }],
-        "Area": [{ name: "Formulas for 2D Shapes PDF", path: "/pdfs/placeholder.pdf" }],
+        "Calendar": [
+            { name: "Calendar - Part 1", path: "/project-papers/Apptitude/Calendar/Calendar1.pdf" },
+            { name: "Calendar - Part 2", path: "/project-papers/Apptitude/Calendar/Calender2.pdf" }
+        ],
+        "Clock": [
+            { name: "Clock - Part 1", path: "/project-papers/Apptitude/Clock/Clock1.pdf" },
+            { name: "Clock - Part 2", path: "/project-papers/Apptitude/Clock/Clock2.pdf" }
+        ],
+        "Average": [
+            { name: "Average - Part 1", path: "/project-papers/Apptitude/Average/Average1.pdf" },
+            { name: "Average - Part 2", path: "/project-papers/Apptitude/Average/Average2.pdf" }
+        ],
+        "Area": [
+            { name: "Area - Part 1", path: "/project-papers/Apptitude/Area/Area1.pdf" },
+            { name: "Area - Part 2", path: "/project-papers/Apptitude/Area/Area2.pdf" }
+        ],
         "Volume and Surface Area": [{ name: "Formulas for 3D Shapes PDF", path: "/pdfs/placeholder.pdf" }],
         "Permutation and Combination": [{ name: "Concepts & Formulas PDF", path: "/pdfs/placeholder.pdf" }],
         "Numbers": [{ name: "Number System Basics PDF", path: "/pdfs/placeholder.pdf" }],
@@ -79,9 +91,18 @@ export const learningData = {
     },
     "Reasoning": {
         "Logical Reasoning": {
-            "Number Series": [{ name: "Practice Questions PDF", path: "/pdfs/placeholder.pdf" }],
-            "Letter and Symbol Series": [{ name: "Practice Questions PDF", path: "/pdfs/placeholder.pdf" }],
-            "Verbal Classification": [{ name: "Concepts & Examples PDF", path: "/pdfs/placeholder.pdf" }],
+            "Number Series": [
+                { name: "Number Series - Part 1", path: "/project-papers/Reasoning/Logical Reasoning/Number Series1.pdf" },
+                { name: "Number Series - Part 2", path: "/project-papers/Reasoning/Logical Reasoning/Number Series2.pdf" }
+            ],
+            "Letter and Symbol Series": [
+                { name: "Letter and Symbol Series - Part 1", path: "/project-papers/Reasoning/Logical Reasoning/Letter and Symbol Series1.pdf" },
+                { name: "Letter and Symbol Series - Part 2", path: "/project-papers/Reasoning/Logical Reasoning/Letter and Symbol Series2.pdf" }
+            ],
+            "Verbal Classification": [
+                { name: "Verbal Classification - Part 1", path: "/project-papers/Reasoning/Logical Reasoning/Verbal Classification1.pdf" },
+                { name: "Verbal Classification - Part 2", path: "/project-papers/Reasoning/Logical Reasoning/Verbal Classification2.pdf" }
+            ],
             "Essential Part": [{ name: "Concepts & Practice PDF", path: "/pdfs/placeholder.pdf" }],
             "Analogies": [{ name: "Verbal & Number Analogies PDF", path: "/pdfs/placeholder.pdf" }],
             "Artificial Language": [{ name: "Decoding Practice PDF", path: "/pdfs/placeholder.pdf" }],

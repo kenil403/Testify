@@ -2,7 +2,14 @@ import React from 'react';
 import { ChevronLeftIcon } from '../components/icons/Icons';
 
 const DepartmentSelectionPage = ({ navigate, startTest }) => {
-    const departments = ['Mechanical Engineering', 'Computer Engineering', 'Electronics & Communication', 'Chemical Engineering', 'Civil Engineering', 'Electrical Engineering'];
+    const departments = [
+        'Mechanical Engineering', 
+        'Computer Engineering', 
+        'Electronics & Communication', 
+        'Chemical Engineering', 
+        'Civil Engineering', 
+        'Electrical Engineering'
+    ];
     return (
         <div className="container mx-auto">
             <button onClick={() => navigate('test-selection')} className="p-2 rounded-full hover:bg-slate-200 transition-colors mb-8">

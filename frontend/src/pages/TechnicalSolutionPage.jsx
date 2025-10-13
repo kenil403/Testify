@@ -1,9 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChevronLeftIcon } from '../components/icons/Icons';
-import { getTechnicalPaperSet1 } from '../data/TechnicalTestBank';
+import { getTechnicalPaperSet1, getTechnicalPaperSet2, getTechnicalPaperSet3, getTechnicalPaperSet4, getTechnicalPaperSet5, getTechnicalPaperSet6 } from '../data/TechnicalTestBank';
 
 const TechnicalSolutionPage = ({ navigate }) => {
-    const paper = getTechnicalPaperSet1();
+    const [selectedPaper, setSelectedPaper] = useState(1);
+    
+    const getPaperData = (paperNumber) => {
+        switch(paperNumber) {
+            case 1: return getTechnicalPaperSet1();
+            case 2: return getTechnicalPaperSet2();
+            case 3: return getTechnicalPaperSet3();
+            case 4: return getTechnicalPaperSet4();
+            case 5: return getTechnicalPaperSet5();
+            case 6: return getTechnicalPaperSet6();
+            default: return getTechnicalPaperSet1();
+        }
+    };
+    
+    const paper = getPaperData(selectedPaper);
     const bank = paper?.questions || [];
 
     return (
@@ -17,10 +31,40 @@ const TechnicalSolutionPage = ({ navigate }) => {
                 </button>
             </div>
             
-            <div className="text-center mb-12">
+            <div className="text-center mb-8">
                 <h1 className="text-5xl font-extrabold text-slate-800">🧪 Technical Solutions</h1>
                 <p className="text-lg text-slate-500 mt-4 max-w-3xl mx-auto">
-                    Complete question paper with answers and detailed explanations. Review all {bank.length} questions with solutions.
+                    Complete question papers with answers and detailed explanations. Select a paper set to review.
+                </p>
+            </div>
+
+            {/* Paper Selection */}
+            <div className="bg-white p-6 rounded-xl shadow-lg mb-8">
+                <h2 className="text-xl font-bold text-slate-800 mb-4">Select Paper Set:</h2>
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                    {[1, 2, 3, 4, 5, 6].map((paperNum) => (
+                        <button
+                            key={paperNum}
+                            onClick={() => setSelectedPaper(paperNum)}
+                            className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                                selectedPaper === paperNum
+                                    ? 'bg-green-100 border-green-500 text-green-800 font-bold'
+                                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                            }`}
+                        >
+                            <div className="text-lg font-semibold">Paper Set {paperNum}</div>
+                            <div className="text-sm opacity-75">60 Questions</div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-slate-800">
+                    Technical Paper Set {selectedPaper} - Solutions
+                </h2>
+                <p className="text-slate-600 mt-2">
+                    Review all {bank.length} questions with detailed explanations
                 </p>
             </div>
 
@@ -29,7 +73,7 @@ const TechnicalSolutionPage = ({ navigate }) => {
                     {bank.map((mcq, index) => (
                         <div key={index} className="border border-slate-200 rounded-lg p-6 bg-slate-50/30">
                             <div className="flex items-center gap-3 mb-4">
-                                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">Q{index + 1}</span>
+                                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">Q{mcq.id || index + 1}</span>
                                 <span className="px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800">✅ Correct Answer Available</span>
                             </div>
                             <div className="mb-6">

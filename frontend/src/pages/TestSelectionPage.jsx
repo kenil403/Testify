@@ -20,7 +20,7 @@ const TestSelectionPage = ({ navigate, setTestState }) => {
             {/* Main Test Categories */}
             <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
                 <div 
-                    onClick={() => { setTestState(prev => ({...prev, selectedCategory: 'Aptitude'})); navigate('test-instructions'); }} 
+                    onClick={() => { setTestState(prev => ({...prev, selectedCategory: 'Aptitude', returnPage: null })); navigate('test-instructions'); }} 
                     className="bg-white p-8 rounded-lg shadow-lg cursor-pointer hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border-t-4 border-amber-400 group"
                 >
                     <h2 className="text-2xl font-bold text-amber-800 mb-3">Aptitude</h2>
@@ -32,7 +32,7 @@ const TestSelectionPage = ({ navigate, setTestState }) => {
 
                 {/* Section 2: Technical */}
                  <div 
-                    onClick={() => { setTestState(prev => ({...prev, selectedCategory: 'Technical'})); navigate('test-instructions'); }} 
+                    onClick={() => { setTestState(prev => ({...prev, selectedCategory: 'Technical', returnPage: null })); navigate('test-instructions'); }} 
                     className="bg-white p-8 rounded-lg shadow-lg cursor-pointer hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 border-t-4 border-green-400 group"
                 >
                     <h2 className="text-2xl font-bold text-green-700 mb-3">Technical</h2>

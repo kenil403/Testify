@@ -1,26 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { sampleMCQs } from '../data/sampleMCQs';
+import { getPracticeTest } from '../data/practiceTestBank';
 import { topicQuestionBank } from '../data/topicQuestionBank';
 
 const TestAreaPage = ({ navigate, setTestState, testState, addTestResult, selectedCategory, currentUser }) => {
     // Always use the correct MCQs for Problems on Trains Practice
     const deriveBank = () => {
+        // Always prefer the exact questions seeded at start (ensures correct practice/assigned paper)
+        if (testState?.testQuestions && Array.isArray(testState.testQuestions) && testState.testQuestions.length > 0) {
+            return testState.testQuestions;
+        }
         if (selectedCategory === 'Problem on Trains Practice') {
             let trainsBank = topicQuestionBank[selectedCategory]();
             // If for any reason the bank is empty, fallback to the uploaded MCQs directly
             if (!trainsBank || trainsBank.length !== 30) {
-                try {
-                    const { practiceTests } = require('../data/practiceTestBank');
-                    if (practiceTests && practiceTests['Problem on Trains'] && practiceTests['Problem on Trains'].questions) {
-                        trainsBank = practiceTests['Problem on Trains'].questions.map(q => ({
-                            question: q.question,
-                            options: q.options,
-                            answer: q.answer,
-                            explanation: q.explanation
-                        }));
-                    }
-                } catch (e) {
-                    
+                const practice = getPracticeTest('Problem on Trains');
+                if (practice && Array.isArray(practice.questions)) {
+                    trainsBank = practice.questions.map(q => ({
+                        question: q.question,
+                        options: q.options,
+                        answer: q.answer,
+                        explanation: q.explanation
+                    }));
                 }
             }
             // If still not found, show a message instead of rendering nothing
@@ -34,21 +35,25 @@ const TestAreaPage = ({ navigate, setTestState, testState, addTestResult, select
             }
             return trainsBank;
         }
-        if (testState?.testQuestions && Array.isArray(testState.testQuestions) && testState.testQuestions.length > 0) {
-            return testState.testQuestions;
-        }
         if (selectedCategory === 'Aptitude') {
             return topicQuestionBank[selectedCategory](currentUser?.email);
         }
-        return topicQuestionBank[selectedCategory] || sampleMCQs;
+        // Most categories in topicQuestionBank are functions that return a question array
+        const bankSource = topicQuestionBank[selectedCategory];
+        if (typeof bankSource === 'function') {
+            return bankSource(currentUser?.email);
+        }
+        return bankSource || sampleMCQs;
     };
     
     const bank = deriveBank();
     const { currentQuestion, answers, markedForReview } = testState;
     
-    // Set time based on test type: 60 minutes for aptitude, 1 minute per question for others
-    const totalTime = selectedCategory === 'Aptitude' ? 60 * 60 : 
-                     selectedCategory === 'Problem on Trains Practice' ? 30 * 60 : 
+    // Set time based on test type: 60 minutes for aptitude and mechanical engineering, 1 minute per question for others
+    const totalTime = selectedCategory === 'Aptitude' ? 60 * 60 :
+                     selectedCategory === 'Mechanical Engineering' ? 60 * 60 :
+                     selectedCategory === 'Electronics & Communication' ? 60 * 60 :
+                     selectedCategory === 'Problem on Trains Practice' ? 30 * 60 :
                      60 * bank.length;
     const [timeLeft, setTimeLeft] = useState(totalTime);
 
@@ -104,7 +109,7 @@ const TestAreaPage = ({ navigate, setTestState, testState, addTestResult, select
             addTestResult(selectedCategory, score);
          }
          
-         setTestState(prev => ({...prev, finished: true, score: score}));
+         setTestState(prev => ({...prev, finished: true, score: score, selectedPaperNumber: prev.selectedPaperNumber}));
          navigate('test-result');
     };
     
