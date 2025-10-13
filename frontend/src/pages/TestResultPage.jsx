@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronLeftIcon } from '../components/icons/Icons';
 import { sampleMCQs } from '../data/sampleMCQs';
 import { topicQuestionBank } from '../data/topicQuestionBank';
+import { getPracticeTest } from '../data/practiceTestBank';
 import { getUserAssignedPaper, recordTestCompletion } from '../services/paperAssignment';
 
 const TestResultPage = ({ navigate, testState, resetTest, currentUser }) => {
@@ -10,24 +11,77 @@ const TestResultPage = ({ navigate, testState, resetTest, currentUser }) => {
     
     // Record test completion when component mounts
     React.useEffect(() => {
-        if (currentUser && selectedCategory === 'Aptitude' && score !== undefined) {
-            const currentPaper = localStorage.getItem(`user_${currentUser.email}_current_paper`) || 'paper1';
-            
-            // Check if this test is already recorded to avoid duplicates
-            const testHistoryKey = `user_${currentUser.email}_test_history`;
-            const existingTests = JSON.parse(localStorage.getItem(testHistoryKey) || '[]');
-            
-            // Only record if this test hasn't been recorded yet
-            const isAlreadyRecorded = existingTests.some(test => 
-                test.testId === testState.testId || 
-                (test.paper === currentPaper && test.category === selectedCategory && 
-                 Math.abs(new Date(test.date) - new Date()) < 60000) // Within 1 minute
-            );
-            
-            if (!isAlreadyRecorded) {
-                recordTestCompletion(currentUser.email, currentPaper, score, selectedCategory, testState.testId);
+        let mounted = true;
+
+        const recordIfNeeded = async () => {
+            if (!currentUser || score === undefined) return;
+
+            // Do not record practice tests
+            if (selectedCategory && /practice/i.test(selectedCategory)) return;
+
+            let currentPaper = 'paper1';
+            try {
+                if (selectedCategory === 'Mechanical Engineering') {
+                    // For Mechanical Engineering, get the paper number from localStorage
+                    const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_mechanical_paper`) || '1';
+                    currentPaper = `mechanical-paper-${paperNumber}`;
+                } else if (selectedCategory === 'Computer Engineering') {
+                    // For Computer Engineering, get the paper number from localStorage
+                    const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_computer_paper`) || '1';
+                    currentPaper = `computer-paper-${paperNumber}`;
+                } else if (selectedCategory === 'Electronics & Communication') {
+                    const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_electronics_paper`) || '1';
+                    currentPaper = `electronics-paper-${paperNumber}`;
+                } else if (selectedCategory === 'Chemical Engineering') {
+                    const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_chemical_paper`) || '1';
+                    currentPaper = `chemical-paper-${paperNumber}`;
+                } else if (selectedCategory === 'Civil Engineering') {
+                    const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_civil_paper`) || '1';
+                    currentPaper = `civil-paper-${paperNumber}`;
+                } else if (selectedCategory === 'Electrical Engineering') {
+                    const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_electrical_paper`) || '1';
+                    currentPaper = `electrical-paper-${paperNumber}`;
+                } else if (selectedCategory === 'Technical') {
+                    const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_technical_paper`) || '1';
+                    currentPaper = `tech-paper${paperNumber}`;
+                } else {
+                    currentPaper = getUserAssignedPaper(currentUser?.email) || 'paper1';
+                }
+            } catch (e) {
+                // fallback
+                if (selectedCategory === 'Mechanical Engineering') {
+                    const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_mechanical_paper`) || '1';
+                    currentPaper = `mechanical-paper-${paperNumber}`;
+                } else if (selectedCategory === 'Computer Engineering') {
+                    const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_computer_paper`) || '1';
+                    currentPaper = `computer-paper-${paperNumber}`;
+                } else if (selectedCategory === 'Electronics & Communication') {
+                    const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_electronics_paper`) || '1';
+                    currentPaper = `electronics-paper-${paperNumber}`;
+                } else if (selectedCategory === 'Chemical Engineering') {
+                    const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_chemical_paper`) || '1';
+                    currentPaper = `chemical-paper-${paperNumber}`;
+                } else if (selectedCategory === 'Civil Engineering') {
+                    const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_civil_paper`) || '1';
+                    currentPaper = `civil-paper-${paperNumber}`;
+                } else if (selectedCategory === 'Electrical Engineering') {
+                    const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_electrical_paper`) || '1';
+                    currentPaper = `electrical-paper-${paperNumber}`;
+                } else {
+                    currentPaper = localStorage.getItem(`user_${currentUser.email}_current_paper`) || 'paper1';
+                }
             }
-        }
+
+            try {
+                await recordTestCompletion(currentUser.email, currentPaper, score, selectedCategory, testState.testId);
+            } catch (err) {
+                console.warn('Could not record test completion to server.', err);
+            }
+        };
+
+        recordIfNeeded();
+
+        return () => { mounted = false; };
     }, [currentUser, selectedCategory, score]);
     
     // Use the exact questions that were used in the test
@@ -36,6 +90,17 @@ const TestResultPage = ({ navigate, testState, resetTest, currentUser }) => {
             return testQuestions; // Use the exact questions from the test
         }
         // Fallback to fresh questions if testQuestions not available
+        if (selectedCategory === 'Problem on Trains Practice') {
+            const practice = getPracticeTest('Problem on Trains');
+            if (practice && Array.isArray(practice.questions)) {
+                return practice.questions.map(q => ({
+                    question: q.question,
+                    options: q.options,
+                    answer: q.answer,
+                    explanation: q.explanation
+                }));
+            }
+        }
         if (selectedCategory === 'Aptitude') {
             return topicQuestionBank[selectedCategory](currentUser?.email);
         }
@@ -45,7 +110,8 @@ const TestResultPage = ({ navigate, testState, resetTest, currentUser }) => {
     const bankData = getTestBank() || [];
     const [showSolutions, setShowSolutions] = useState(false);
     const answeredCount = (answers || []).filter(a => a !== null).length;
-    const isTechnical = (selectedCategory === 'Technical');
+  const isTechnical = (selectedCategory === 'Technical');
+  const isMechanical = (selectedCategory === 'Mechanical Engineering');
 
     if (showSolutions) {
         return (
@@ -55,7 +121,11 @@ const TestResultPage = ({ navigate, testState, resetTest, currentUser }) => {
                 </button>
                 
                 <div className="text-center mb-12">
-                    <h1 className="text-5xl font-extrabold text-slate-800">{isTechnical ? '🧪 Technical Solutions' : '📖 Aptitude Solutions'}</h1>
+        <h1 className="text-5xl font-extrabold text-slate-800">
+            {isTechnical ? '🧪 Technical Solutions' :
+             isMechanical ? `🔧 Mechanical Engineering Solutions ${testState?.selectedPaperNumber === 2 ? '- Paper 2' : testState?.selectedPaperNumber === 3 ? '- Paper 3' : testState?.selectedPaperNumber === 4 ? '- Paper 4' : ''}` :
+             '📖 Aptitude Solutions'}
+        </h1>
                     <p className="text-lg text-slate-500 mt-4 max-w-3xl mx-auto">
                         Complete question paper with answers and detailed explanations. Review all {bankData.length} questions with solutions.
                     </p>
@@ -174,17 +244,20 @@ const TestResultPage = ({ navigate, testState, resetTest, currentUser }) => {
                     <p className="text-7xl font-bold text-amber-900">{score}<span className="text-4xl">/{bankData.length}</span></p>
                 </div>
                 <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
-                    <button 
-                        onClick={() => setShowSolutions(true)} 
-                        className="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700"
-                    >
-                        View Solutions
-                    </button>
+        <button
+        onClick={() => {
+                // Show inline solutions for all sections (Aptitude, Technical, and all courses)
+                setShowSolutions(true);
+            }}
+            className="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700"
+        >
+            View Solutions
+        </button>
                     <button
                         onClick={() => {
                             resetTest();
-                            // Always redirect to test-selection for Technical test
-                            if (testState?.selectedCategory === 'Technical') {
+                            // Always redirect to test-selection for Technical, Mechanical Engineering, Computer Engineering, Electronics & Communication, and Chemical Engineering tests
+                            if (testState?.selectedCategory === 'Technical' || testState?.selectedCategory === 'Mechanical Engineering' || testState?.selectedCategory === 'Computer Engineering' || testState?.selectedCategory === 'Electronics & Communication' || testState?.selectedCategory === 'Chemical Engineering' || testState?.selectedCategory === 'Civil Engineering' || testState?.selectedCategory === 'Electrical Engineering') {
                                 navigate('test-selection');
                             } else {
                                 navigate(testState && testState.returnPage ? testState.returnPage : 'test-selection');

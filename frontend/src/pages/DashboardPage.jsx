@@ -15,15 +15,16 @@ const DashboardPage = ({ navigate, user }) => {
         async function load() {
             try {
                 setLoading(true);
-                // Get test history from localStorage (local tests) and API (server tests)
-                const localTests = getUserTestHistory(user?.email) || [];
+                // Get test history from local cache/service (may be async) and API (server tests attached to user)
+                const localTests = await getUserTestHistory(user?.email) || [];
                 const serverTests = user?.testHistory || [];
                 
-                // Remove duplicates and combine both sources
-                const allTests = [...localTests];
+                // Remove duplicates and combine both sources; filter out practice tests
+                const allTests = (localTests || []).filter(t => !(t.category && /practice/i.test(t.category)));
                 
                 // Add server tests that don't exist in local tests
                 serverTests.forEach(serverTest => {
+                    if (serverTest && serverTest.category && /practice/i.test(serverTest.category)) return; // skip practice tests
                     const exists = allTests.some(localTest => 
                         localTest.category === serverTest.category && 
                         localTest.score === serverTest.score &&
@@ -34,11 +35,19 @@ const DashboardPage = ({ navigate, user }) => {
                     }
                 });
                 
-                // Sort by date (newest first)
-                allTests.sort((a, b) => new Date(b.date) - new Date(a.date));
+                // Deduplicate by stable key then sort by date (newest first)
+                const seen = new Map();
+                allTests.forEach(t => {
+                    if (!t) return;
+                    // build a dedupe key (prefer _id/testId, else category+score+rounded timestamp)
+                    const key = t._id || t.id || t.testId || `${t.category || ''}_${t.score || ''}_${Math.round(new Date(t.date || 0).getTime() / 60000)}`;
+                    if (!seen.has(key)) seen.set(key, t);
+                });
+                const deduped = Array.from(seen.values());
+                deduped.sort((a, b) => new Date(b.date) - new Date(a.date));
                 
                 if (!mounted) return;
-                setRecentTests(allTests);
+                setRecentTests(deduped);
             } catch (err) {
                 console.error('Failed to load test history', err);
                 if (mounted) setError('Failed to load test history');
