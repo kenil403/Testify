@@ -60,7 +60,8 @@ export const recordTestCompletion = async (userId, paper, score, category, testI
         if (category && /practice/i.test(category)) {
             return null;
         }
-        const payload = { category, score };
+        // 'paper' can be a display label; prefer passing DB paperId if possible
+        const payload = { category, score, paperId: paper || undefined };
         const res = await addTestResult(payload);
         if (res && Array.isArray(res.testHistory)) {
             // server returned full history

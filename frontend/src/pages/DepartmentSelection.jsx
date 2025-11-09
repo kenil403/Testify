@@ -15,7 +15,7 @@ const DepartmentSelectionPage = ({ navigate, startTest }) => {
             <button onClick={() => navigate('test-selection')} className="p-2 rounded-full hover:bg-slate-200 transition-colors mb-8">
                 <ChevronLeftIcon />
             </button>
-            <h1 className="text-4xl font-bold text-center mb-10">Select Your Department</h1>
+            <h1 className="text-4xl font-bold text-center mb-10">Select Your Course</h1>
             <div className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
                 <ul className="space-y-4">
                     {departments.map(dept => (

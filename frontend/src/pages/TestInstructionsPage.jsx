@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronLeftIcon } from '../components/icons/Icons';
 import { topicQuestionBank } from '../data/topicQuestionBank';
 import { getPracticeTest } from '../data/practiceTestBank';
+import { assignPaper as assignDbPaper, getPaper as getDbPaper } from '../api/papers';
 
 const TestInstructionsPage = ({ navigate, setTestState, testState, currentUser }) => {
     const [agreed, setAgreed] = useState(false);
@@ -140,8 +141,14 @@ const TestInstructionsPage = ({ navigate, setTestState, testState, currentUser }
                     </label>
                 </div>
                 <div className="text-center mt-8">
-                     <button 
-                        onClick={() => {
+                    <button 
+                        onClick={async () => {
+                            // Require authentication at the moment of proceeding to the test
+                            if (!currentUser) {
+                                alert('Please login or sign up to start the test.');
+                                navigate('auth');
+                                return;
+                            }
                             // Build the exact bank to be used for this attempt
                             const category = testState?.selectedCategory || window.testCategory;
                             const source = category && topicQuestionBank[category];
@@ -151,6 +158,78 @@ const TestInstructionsPage = ({ navigate, setTestState, testState, currentUser }
                                 const practice = getPracticeTest('Problem on Trains');
                                 if (practice && Array.isArray(practice.questions)) {
                                     bank = practice.questions.slice(0, 30);
+                                }
+                            } else if (category === 'Aptitude') {
+                                // Try DB-backed Aptitude papers first: assign and fetch the paper
+                                let assignedId = null;
+                                try {
+                                    const lastLocal = localStorage.getItem(`user_${currentUser?.email}_current_paper`) || null;
+                                    assignedId = await assignDbPaper('Aptitude', lastLocal);
+                                } catch {}
+                                if (assignedId) {
+                                    const paper = await getDbPaper('Aptitude', assignedId);
+                                    if (paper && Array.isArray(paper.questions) && paper.questions.length > 0) {
+                                        bank = paper.questions.map(q => ({
+                                            question: q.question,
+                                            options: q.options,
+                                            answer: q.answer,
+                                            explanation: q.explanation
+                                        }));
+                                        // Persist current paper id locally to influence next assignment
+                                        localStorage.setItem(`user_${currentUser?.email}_current_paper`, assignedId);
+                                    }
+                                }
+                                // Enforce DB-only for Aptitude: if unavailable, stop here
+                                if (!bank || bank.length === 0) {
+                                    alert('Aptitude papers are unavailable right now. Please try again later.');
+                                    return;
+                                }
+                            } else if (category === 'Technical') {
+                                let assignedId = null;
+                                try {
+                                    const lastDbPaperId = localStorage.getItem(`user_${currentUser?.email}_current_paper_Technical`) || null;
+                                    assignedId = await assignDbPaper('Technical', lastDbPaperId);
+                                } catch {}
+                                if (assignedId) {
+                                    const paper = await getDbPaper('Technical', assignedId);
+                                    if (paper && Array.isArray(paper.questions) && paper.questions.length > 0) {
+                                        bank = paper.questions.map(q => ({ question: q.question, options: q.options, answer: q.answer, explanation: q.explanation }));
+                                        // Persist current paper id and numeric selection for result pages
+                                        localStorage.setItem(`user_${currentUser?.email}_current_paper_Technical`, assignedId);
+                                        const numMatch = String(assignedId).match(/(\d+)$/);
+                                        if (numMatch) localStorage.setItem(`user_${currentUser?.email}_current_technical_paper`, numMatch[1]);
+                                    }
+                                }
+                                if (!bank || bank.length === 0) {
+                                    alert('Technical papers are unavailable right now. Please try again later.');
+                                    return;
+                                }
+                            } else if (category === 'Mechanical Engineering' || category === 'Computer Engineering' || category === 'Electronics & Communication' || category === 'Chemical Engineering' || category === 'Civil Engineering' || category === 'Electrical Engineering') {
+                                let assignedId = null;
+                                try {
+                                    const lastDbPaperId = localStorage.getItem(`user_${currentUser?.email}_current_paper_${category}`) || null;
+                                    assignedId = await assignDbPaper(category, lastDbPaperId);
+                                } catch {}
+                                if (assignedId) {
+                                    const paper = await getDbPaper(category, assignedId);
+                                    if (paper && Array.isArray(paper.questions) && paper.questions.length > 0) {
+                                        bank = paper.questions.map(q => ({ question: q.question, options: q.options, answer: q.answer, explanation: q.explanation }));
+                                        // Persist current paper id
+                                        localStorage.setItem(`user_${currentUser?.email}_current_paper_${category}`, assignedId);
+                                        // Also persist numeric selected paper for existing result page usage
+                                        const numMatch = String(assignedId).match(/(\d+)$/);
+                                        const num = numMatch ? numMatch[1] : '1';
+                                        if (category === 'Mechanical Engineering') localStorage.setItem(`user_${currentUser?.email}_current_mechanical_paper`, num);
+                                        if (category === 'Computer Engineering') localStorage.setItem(`user_${currentUser?.email}_current_computer_paper`, num);
+                                        if (category === 'Electronics & Communication') localStorage.setItem(`user_${currentUser?.email}_current_electronics_paper`, num);
+                                        if (category === 'Chemical Engineering') localStorage.setItem(`user_${currentUser?.email}_current_chemical_paper`, num);
+                                        if (category === 'Civil Engineering') localStorage.setItem(`user_${currentUser?.email}_current_civil_paper`, num);
+                                        if (category === 'Electrical Engineering') localStorage.setItem(`user_${currentUser?.email}_current_electrical_paper`, num);
+                                    }
+                                }
+                                if (!bank || bank.length === 0) {
+                                    alert(`${category} papers are unavailable right now. Please try again later.`);
+                                    return;
                                 }
                             } else {
                                 bank = typeof source === 'function' ? source(currentUser?.email) : (source || []);

@@ -5,7 +5,12 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "import:pot": "node scripts/import_pot_pdfs.js",
+    "import:learning": "node scripts/import_from_learning_data.js",
+    "import:aptitude": "node scripts/import_aptitude_papers.js",
+    "import:technical": "node scripts/import_technical_papers.js",
+    "import:courses": "node scripts/import_course_papers.js"
   },
   "dependencies": {
     "axios": "^1.12.2",

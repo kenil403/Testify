@@ -9,8 +9,8 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [mobile, setMobile] = useState('');
-    const [role, setRole] = useState('Student');
     const [department, setDepartment] = useState('');
+    const [role, setRole] = useState('Student');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     // Server-side / submission error - prefer app-level error if provided
@@ -25,8 +25,21 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
         password: '',
         confirmPassword: '',
         mobile: '',
-        department: ''
+        department: '',
+        role: ''
     });
+
+    // UX: Track field interaction to avoid showing errors while typing initially
+    const [touched, setTouched] = useState({
+        name: false,
+        email: false,
+        password: false,
+        confirmPassword: false,
+        mobile: false,
+        department: false,
+        role: false
+    });
+    const [submitAttempted, setSubmitAttempted] = useState(false);
 
     const departments = ['Mechanical Engineering', 'Computer Engineering', 'Electronics & Communication', 'Chemical Engineering', 'Civil Engineering', 'Electrical Engineering'];
 
@@ -111,35 +124,46 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
         setErrors(prev => ({ ...prev, mobile: error }));
     };
 
+    const markTouched = (field) => setTouched((prev) => ({ ...prev, [field]: true }));
+
     // Real-time validation
     const handleFieldChange = (field, value) => {
+        // Allow spaces in full name while typing; trim other fields except passwords
+        const v = (field === 'password' || field === 'confirmPassword' || field === 'name') ? value : value.trim();
         let error = '';
         
         switch (field) {
             case 'name':
-                error = validateName(value);
-                setName(value);
+                error = validateName(v);
+                setName(v);
                 break;
             case 'email':
-                error = validateEmail(value);
-                setEmail(value);
+                // normalize to lowercase email
+                const em = v.toLowerCase();
+                error = validateEmail(em);
+                setEmail(em);
                 break;
             case 'password':
-                error = validatePassword(value);
-                setPassword(value);
+                // For login, only require non-empty password; for signup enforce strength
+                error = isLoginView ? (v ? '' : 'Password is required.') : validatePassword(v);
+                setPassword(v);
                 // Also validate confirm password if it exists
                 if (confirmPassword) {
-                    const confirmError = validateConfirmPassword(value, confirmPassword);
+                    const confirmError = validateConfirmPassword(v, confirmPassword);
                     setErrors(prev => ({ ...prev, confirmPassword: confirmError }));
                 }
                 break;
             case 'confirmPassword':
-                error = validateConfirmPassword(password, value);
-                setConfirmPassword(value);
+                error = validateConfirmPassword(password, v);
+                setConfirmPassword(v);
                 break;
             case 'department':
-                error = value ? '' : "Please select your department.";
-                setDepartment(value);
+                error = v ? '' : "Please select your department.";
+                setDepartment(v);
+                break;
+            case 'role':
+                error = v ? '' : "Please select your role.";
+                setRole(v);
                 break;
             default:
                 break;
@@ -148,14 +172,38 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
         setErrors(prev => ({ ...prev, [field]: error }));
     };
 
+    // Determine if form is valid to enable/disable submit proactively
+    const isFormValid = () => {
+        if (isLoginView) {
+            // Login requires a valid email and a non-empty password
+            const emailOk = validateEmail(email) === '';
+            const passOk = !!password;
+            return emailOk && passOk;
+        } else {
+            // Signup requires all validators to pass
+            const nameOk = validateName(name) === '';
+            const emailOk = validateEmail(email) === '';
+            const passOk = validatePassword(password) === '';
+            const confirmOk = validateConfirmPassword(password, confirmPassword) === '';
+            const mobileOk = validateMobile(mobile) === '';
+            const roleOk = !!role;
+            // Department is only required for Student role
+            const deptOk = role === 'Admin' ? true : !!department;
+            return nameOk && emailOk && passOk && confirmOk && mobileOk && roleOk && deptOk;
+        }
+    };
+
     const validateAllFields = () => {
         const newErrors = {
             name: !isLoginView ? validateName(name) : '',
             email: validateEmail(email),
-            password: validatePassword(password),
+            // On login, only ensure a non-empty password; on signup enforce full strength
+            password: isLoginView ? (password ? '' : 'Password is required.') : validatePassword(password),
             confirmPassword: !isLoginView ? validateConfirmPassword(password, confirmPassword) : '',
-            mobile: !isLoginView && role === 'Student' ? validateMobile(mobile) : '',
-            department: !isLoginView ? (department ? '' : "Please select your department.") : ''
+            mobile: !isLoginView ? validateMobile(mobile) : '',
+            role: !isLoginView ? (role ? '' : "Please select your role.") : '',
+            // Department is only required for Student role
+            department: !isLoginView ? (role === 'Admin' ? '' : (department ? '' : "Please select your department.")) : ''
         };
         
         setErrors(newErrors);
@@ -164,8 +212,9 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
 
     const handleFormSubmit = async (e) => {
         e.preventDefault();
-    // clear previous server errors
-    setServerError('');
+        // clear previous server errors
+        setServerError('');
+        setSubmitAttempted(true);
         if (!validateAllFields()) {
             return;
         }
@@ -184,7 +233,12 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
         } else {
             if (handleRegister) return handleRegister(name, email, password, department, mobile, role);
             try {
-                const data = await apiAuth.register({ name, email, password, mobile, role, department });
+                const payload = { name, email, password, mobile, role };
+                // Only include department for Student role
+                if (role === 'Student') {
+                    payload.department = department;
+                }
+                const data = await apiAuth.register(payload);
                 apiAuth.setToken(data.token);
                 if (navigate) navigate('/dashboard');
             } catch (err) {
@@ -203,8 +257,11 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
             password: '',
             confirmPassword: '',
             mobile: '',
-            department: ''
+            department: '',
+            role: ''
         });
+        setTouched({ name: false, email: false, password: false, confirmPassword: false, mobile: false, department: false, role: false });
+        setSubmitAttempted(false);
         // clear server errors when switching view
         setServerError('');
     }
@@ -232,63 +289,88 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
                         {!isLoginView && (
                             <>
                                 <div>
+                                    <label className="block text-slate-700 font-semibold mb-2">Role</label>
+                                    <select 
+                                        value={role} 
+                                        onChange={(e) => {
+                                            handleFieldChange('role', e.target.value);
+                                            // Reset department when switching to Admin
+                                            if (e.target.value === 'Admin') {
+                                                setDepartment('');
+                                                setErrors(prev => ({ ...prev, department: '' }));
+                                            }
+                                        }} 
+                                        onBlur={() => markTouched('role')}
+                                        className={`w-full p-3 border rounded-md focus:ring-2 focus:ring-green-500 transition bg-white ${
+                                            ((touched.role || submitAttempted) && errors.role) ? 'border-red-500' : 'border-gray-300'
+                                        }`} 
+                                        required
+                                        aria-invalid={((touched.role || submitAttempted) && !!errors.role) || undefined}
+                                    >
+                                        <option value="Student">Student</option>
+                                        <option value="Admin">Admin</option>
+                                    </select>
+                                    {(touched.role || submitAttempted) && errors.role && <p className="text-red-500 text-sm mt-1">{errors.role}</p>}
+                                </div>
+                                <div>
                                     <label className="block text-slate-700 font-semibold mb-2">Full Name</label>
                                     <input 
                                         type="text" 
                                         value={name} 
                                         onChange={(e) => handleFieldChange('name', e.target.value)} 
+                                        onBlur={() => markTouched('name')}
                                         className={`w-full p-3 border rounded-md focus:ring-2 focus:ring-green-500 transition ${
-                                            errors.name ? 'border-red-500' : 'border-gray-300'
+                                            ((touched.name || submitAttempted) && errors.name) ? 'border-red-500' : 'border-gray-300'
                                         }`} 
                                         placeholder="Enter your full name" 
                                         required 
+                                        minLength={2}
+                                        pattern="^[A-Za-z ]{2,}$"
+                                        title="Name should be at least 2 characters and contain only letters and spaces"
+                                        autoComplete="name"
+                                        aria-invalid={((touched.name || submitAttempted) && !!errors.name) || undefined}
                                     />
-                                    {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+                                    {(touched.name || submitAttempted) && errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                                 </div>
                                 <div>
-                                    <label className="block text-slate-700 font-semibold mb-2">Role</label>
-                                    <select 
-                                        value={role} 
-                                        onChange={(e) => setRole(e.target.value)} 
-                                        className="w-full p-3 border rounded-md focus:ring-2 focus:ring-green-500 transition bg-white" 
-                                        required
-                                    >
-                                        <option value="Student">Student</option>
-                                        <option value="Admin">Admin</option>
-                                    </select>
+                                    <label className="block text-slate-700 font-semibold mb-2">Mobile Number</label>
+                                    <input 
+                                        type="tel" 
+                                        value={mobile} 
+                                        onChange={(e) => handleMobileChange(e.target.value)} 
+                                        onBlur={() => markTouched('mobile')}
+                                        className={`w-full p-3 border rounded-md focus:ring-2 focus:ring-green-500 transition ${
+                                            ((touched.mobile || submitAttempted) && errors.mobile) ? 'border-red-500' : 'border-gray-300'
+                                        }`} 
+                                        placeholder="9876543210" 
+                                        maxLength="10"
+                                        required 
+                                        pattern="^[6-9][0-9]{9}$"
+                                        title="Enter a valid 10-digit mobile number starting with 6-9"
+                                        autoComplete="tel"
+                                        aria-invalid={((touched.mobile || submitAttempted) && !!errors.mobile) || undefined}
+                                    />
+                                    {(touched.mobile || submitAttempted) && errors.mobile && <p className="text-red-500 text-sm mt-1">{errors.mobile}</p>}
                                 </div>
                                 {role === 'Student' && (
                                     <div>
-                                        <label className="block text-slate-700 font-semibold mb-2">Mobile Number</label>
-                                        <input 
-                                            type="tel" 
-                                            value={mobile} 
-                                            onChange={(e) => handleMobileChange(e.target.value)} 
-                                            className={`w-full p-3 border rounded-md focus:ring-2 focus:ring-green-500 transition ${
-                                                errors.mobile ? 'border-red-500' : 'border-gray-300'
+                                        <label className="block text-slate-700 font-semibold mb-2">Department</label>
+                                        <select 
+                                            value={department} 
+                                            onChange={(e) => handleFieldChange('department', e.target.value)} 
+                                            onBlur={() => markTouched('department')}
+                                            className={`w-full p-3 border rounded-md focus:ring-2 focus:ring-green-500 transition bg-white ${
+                                                ((touched.department || submitAttempted) && errors.department) ? 'border-red-500' : 'border-gray-300'
                                             }`} 
-                                            placeholder="9876543210" 
-                                            maxLength="10"
-                                            required 
-                                        />
-                                        {errors.mobile && <p className="text-red-500 text-sm mt-1">{errors.mobile}</p>}
+                                            required
+                                            aria-invalid={((touched.department || submitAttempted) && !!errors.department) || undefined}
+                                        >
+                                            <option value="" disabled>-- Select your branch --</option>
+                                            {departments.map(dept => <option key={dept} value={dept}>{dept}</option>)}
+                                        </select>
+                                        {(touched.department || submitAttempted) && errors.department && <p className="text-red-500 text-sm mt-1">{errors.department}</p>}
                                     </div>
                                 )}
-                                <div>
-                                    <label className="block text-slate-700 font-semibold mb-2">Department</label>
-                                    <select 
-                                        value={department} 
-                                        onChange={(e) => handleFieldChange('department', e.target.value)} 
-                                        className={`w-full p-3 border rounded-md focus:ring-2 focus:ring-green-500 transition bg-white ${
-                                            errors.department ? 'border-red-500' : 'border-gray-300'
-                                        }`} 
-                                        required
-                                    >
-                                        <option value="" disabled>-- Select your branch --</option>
-                                        {departments.map(dept => <option key={dept} value={dept}>{dept}</option>)}
-                                    </select>
-                                    {errors.department && <p className="text-red-500 text-sm mt-1">{errors.department}</p>}
-                                </div>
                             </>
                         )}
                         <div>
@@ -297,13 +379,14 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
                                 type="email" 
                                 value={email} 
                                 onChange={(e) => handleFieldChange('email', e.target.value)} 
+                                onBlur={() => markTouched('email')}
                                 className={`w-full p-3 border rounded-md focus:ring-2 focus:ring-green-500 transition ${
-                                    errors.email ? 'border-red-500' : 'border-gray-300'
+                                    ((touched.email || submitAttempted) && errors.email) ? 'border-red-500' : 'border-gray-300'
                                 }`} 
                                 placeholder="you@example.com" 
                                 required 
                             />
-                            {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+                            {(touched.email || submitAttempted) && errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                         </div>
                         <div>
                             <label className="block text-slate-700 font-semibold mb-2">Password</label>
@@ -312,11 +395,15 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
                                     type={showPassword ? "text" : "password"} 
                                     value={password} 
                                     onChange={(e) => handleFieldChange('password', e.target.value)} 
+                                    onBlur={() => markTouched('password')}
                                     className={`w-full p-3 pr-10 border rounded-md focus:ring-2 focus:ring-green-500 transition ${
-                                        errors.password ? 'border-red-500' : 'border-gray-300'
+                                        ((touched.password || submitAttempted) && errors.password) ? 'border-red-500' : 'border-gray-300'
                                     }`} 
                                     placeholder="••••••••" 
                                     required 
+                                    minLength={!isLoginView ? 8 : undefined}
+                                    autoComplete={isLoginView ? 'current-password' : 'new-password'}
+                                    aria-invalid={((touched.password || submitAttempted) && !!errors.password) || undefined}
                                 />
                                 <button
                                     type="button"
@@ -326,18 +413,7 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
                                     {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
                                 </button>
                             </div>
-                            {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
-                            {isLoginView && (
-                                <div className="text-right mt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => navigate && navigate('forgot-password')}
-                                        className="text-sm text-green-600 hover:underline font-semibold"
-                                    >
-                                        Forgot Password?
-                                    </button>
-                                </div>
-                            )}
+                            {(touched.password || submitAttempted) && errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
                             {!isLoginView && password && (
                                 <div className="mt-2">
                                     <div className="flex items-center justify-between text-xs mb-1">
@@ -389,11 +465,14 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
                                         type={showConfirmPassword ? "text" : "password"} 
                                         value={confirmPassword} 
                                         onChange={(e) => handleFieldChange('confirmPassword', e.target.value)} 
+                                        onBlur={() => markTouched('confirmPassword')}
                                         className={`w-full p-3 pr-10 border rounded-md focus:ring-2 focus:ring-green-500 transition ${
-                                            errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                                            ((touched.confirmPassword || submitAttempted) && errors.confirmPassword) ? 'border-red-500' : 'border-gray-300'
                                         }`} 
                                         placeholder="••••••••" 
                                         required 
+                                        autoComplete="new-password"
+                                        aria-invalid={((touched.confirmPassword || submitAttempted) && !!errors.confirmPassword) || undefined}
                                     />
                                     <button
                                         type="button"
@@ -403,13 +482,13 @@ const AuthPage = ({ navigate, handleLogin, handleRegister, appServerError, setAp
                                         {showConfirmPassword ? <EyeSlashIcon /> : <EyeIcon />}
                                     </button>
                                 </div>
-                                {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
+                                {(touched.confirmPassword || submitAttempted) && errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
                             </div>
                         )}
                         <button 
                             type="submit" 
                             className="w-full py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled={Object.values(errors).some(error => error !== '')}
+                            disabled={!isFormValid()}
                         >
                             {isLoginView ? 'Login' : 'Create Account'}
                         </button>

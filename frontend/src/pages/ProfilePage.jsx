@@ -377,12 +377,15 @@ const ProfilePage = ({ navigate, user, updateUserProfile, handleLogout }) => {
                                 >
                                     Edit Profile
                                 </button>
-                                <button
-                                    onClick={() => navigate("dashboard")}
-                                    className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105"
-                                >
-                                    View Dashboard
-                                </button>
+                                {/* Hide dashboard button for Admin users */}
+                                {user?.role !== 'Admin' && (
+                                    <button
+                                        onClick={() => navigate("dashboard")}
+                                        className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105"
+                                    >
+                                        View Dashboard
+                                    </button>
+                                )}
                             </>
                         ) : (
                             <>

@@ -30,12 +30,15 @@ export default function Navbar({ navigate, currentPage, currentUser, handleLogou
         >
           Learn
         </a>
-        <a
-          onClick={() => navigate("test-selection")}
-          className={currentPage.startsWith("test-") ? activeLinkStyle : linkStyle}
-        >
-          Test
-        </a>
+        {/* Hide Test link for Admin users */}
+        {currentUser?.role !== 'Admin' && (
+          <a
+            onClick={() => navigate("test-selection")}
+            className={currentPage.startsWith("test-") ? activeLinkStyle : linkStyle}
+          >
+            Test
+          </a>
+        )}
 
         {/* Profile / Login Circle */}
         <div

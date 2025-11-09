@@ -1,6 +1,8 @@
 import React from 'react';
 import { learningData } from '../data/learningData';
 import { ChevronLeftIcon, FolderIcon, PdfIcon } from '../components/icons/Icons';
+import { listPdfs, buildViewUrl, buildDownloadUrl } from '../api/pdfs';
+import { getToken } from '../api/auth';
 
 const LearnContentPage = ({ pathParts, navigate, startPracticeTest }) => {
     // Helper to get the current data slice based on the path
@@ -19,12 +21,74 @@ const LearnContentPage = ({ pathParts, navigate, startPracticeTest }) => {
 
     const data = get_current_data(pathParts);
 
+    // If a user opens a subsection without being logged in, show a one-time alert
+    const alertedRef = React.useRef(false);
+    React.useEffect(() => {
+        if (alertedRef.current) return;
+        const token = getToken();
+        if (!token && pathParts.length >= 2) {
+            alertedRef.current = true;
+            // Show alert, then redirect to login/signup page
+            alert('Please login or sign up to access PDFs and practice tests.');
+            navigate('auth');
+        }
+    }, [pathParts.join('__')]);
+
     // Special handling for Problem on Trains
     const isProblemOnTrains = pathParts.length === 2 && 
                              pathParts[0] === 'Aptitude' && 
                              pathParts[1] === 'Problem on Trains';
 
     const isFinalLevel = Array.isArray(data) || isProblemOnTrains;
+
+    // Fetch PDFs from backend for Problem on Trains only (pilot)
+    const [pdfs, setPdfs] = React.useState([]);
+    const [loadingPdfs, setLoadingPdfs] = React.useState(false);
+    React.useEffect(() => {
+        let cancelled = false;
+        async function load() {
+            if (!isProblemOnTrains) { setPdfs([]); return; }
+            setLoadingPdfs(true);
+            const items = await listPdfs('Apptitude', 'Problems on Trains');
+            if (!cancelled) { setPdfs(items); setLoadingPdfs(false); }
+        }
+        load();
+        return () => { cancelled = true; };
+    }, [isProblemOnTrains]);
+
+    // Also fetch from DB for other final-level pages and map by title
+    const [genericPdfs, setGenericPdfs] = React.useState([]);
+    const [loadingGeneric, setLoadingGeneric] = React.useState(false);
+    React.useEffect(() => {
+        let cancelled = false;
+        async function loadGeneric() {
+            if (!Array.isArray(data) || pathParts.length < 2 || isProblemOnTrains) {
+                if (!cancelled) { setGenericPdfs([]); setLoadingGeneric(false); }
+                return;
+            }
+            setLoadingGeneric(true);
+            const section = pathParts[0];
+            const subsection = pathParts[1];
+            const items = await listPdfs(section, subsection);
+            if (!cancelled) { setGenericPdfs(items || []); setLoadingGeneric(false); }
+        }
+        loadGeneric();
+        return () => { cancelled = true; };
+    }, [Array.isArray(data), pathParts.join('||'), isProblemOnTrains]);
+
+    const normalizeTitle = (s) => String(s || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '')
+        .trim();
+    const genericMap = React.useMemo(() => {
+        const map = new Map();
+        for (const p of genericPdfs) {
+            map.set(normalizeTitle(p.title), p);
+        }
+        return map;
+    }, [genericPdfs]);
+
+    // (Reverted) Only Problems on Trains uses DB; other sections use static links from learningData
 
     // Breadcrumb Navigation
     const breadcrumbs = [...pathParts];
@@ -36,7 +100,17 @@ const LearnContentPage = ({ pathParts, navigate, startPracticeTest }) => {
     // Title
     const title = pathParts.length > 0 ? pathParts[pathParts.length - 1].replace(/__/g, ' ') : "Learning Center";
 
+    const requireAuthOrRedirect = () => {
+        const token = getToken();
+        if (!token) {
+            navigate('auth');
+            return false;
+        }
+        return true;
+    };
+
     const handleStartPractice = () => {
+        if (!requireAuthOrRedirect()) return;
         // Always use the correct topic and redirect for Problems on Trains Practice
         const topic = isProblemOnTrains ? 'Problem on Trains Practice' : pathParts.join(' / ');
         const returnPage = `learn-${pathParts.map(encodeURIComponent).join('__')}`;
@@ -89,20 +163,38 @@ const LearnContentPage = ({ pathParts, navigate, startPracticeTest }) => {
                         <div className="space-y-6">
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                                 <h3 className="text-xl font-bold text-blue-800 mb-4">📚 Study Materials</h3>
-                                <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-blue-300">
-                                    <div className="flex items-center">
-                                        <PdfIcon />
-                                        <span className="ml-4 font-medium text-slate-700">Problem on Trains Study Guide</span>
-                                    </div>
-                                    <a 
-                                        href="/project-papers/Problem on trains2.pdf" 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 font-semibold"
-                                    >
-                                        Download PDF
-                                    </a>
-                                </div>
+                                {loadingPdfs ? (
+                                    <div className="text-sm text-slate-500">Loading PDFs…</div>
+                                ) : pdfs.length > 0 ? (
+                                    <ul className="space-y-3">
+                                        {pdfs.map(item => (
+                                            <li key={item.id} className="flex items-center justify-between p-4 bg-white rounded-lg border border-blue-300">
+                                                <div className="flex items-center min-w-0">
+                                                    <PdfIcon />
+                                                    <a
+                                                        className="ml-4 font-medium text-slate-700 truncate hover:text-blue-700"
+                                                        href={buildViewUrl(item.id)}
+                                                        onClick={(e) => { if (!requireAuthOrRedirect()) { e.preventDefault(); } }}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        title={item.title}
+                                                    >
+                                                        {item.title}
+                                                    </a>
+                                                </div>
+                                                <a 
+                                                    href={buildDownloadUrl(item.id)} 
+                                                    onClick={(e) => { if (!requireAuthOrRedirect()) { e.preventDefault(); } }}
+                                                    className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 font-semibold"
+                                                >
+                                                    Download PDF
+                                                </a>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <div className="text-sm text-slate-500">No study materials found for this topic yet.</div>
+                                )}
                             </div>
                             
                             <div className="bg-green-50 border border-green-200 rounded-lg p-6">
@@ -133,19 +225,27 @@ const LearnContentPage = ({ pathParts, navigate, startPracticeTest }) => {
                             </div>
                         </div>
                     ) : (
-                        <ul className="space-y-3">
-                            {data.map(item => (
-                                <li key={item.name} className="flex items-center justify-between p-4 rounded-md bg-slate-50 hover:bg-green-100 transition-colors">
-                                    <a href={item.path} target="_blank" rel="noopener noreferrer" className="flex items-center min-w-0">
-                                        <PdfIcon />
-                                        <span className="ml-4 font-medium text-slate-700 truncate">{item.name}</span>
-                                    </a>
-                                    <a href={item.path} download className="inline-flex items-center px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 font-semibold ml-4">
-                                        Download PDF
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
+                        <div className="space-y-3">
+                            {loadingGeneric ? (
+                                <div className="text-sm text-slate-500">Loading PDFs…</div>
+                            ) : genericPdfs && genericPdfs.length > 0 ? (
+                                <ul className="space-y-3">
+                                    {genericPdfs.map(item => (
+                                        <li key={item.id} className="flex items-center justify-between p-4 rounded-md bg-slate-50 hover:bg-green-100 transition-colors">
+                                            <a href={buildViewUrl(item.id)} target="_blank" rel="noopener noreferrer" className="flex items-center min-w-0" onClick={(e) => { if (!requireAuthOrRedirect()) { e.preventDefault(); } }}>
+                                                <PdfIcon />
+                                                <span className="ml-4 font-medium text-slate-700 truncate">{item.title}</span>
+                                            </a>
+                                            <a href={buildDownloadUrl(item.id)} className="inline-flex items-center px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 font-semibold ml-4" onClick={(e) => { if (!requireAuthOrRedirect()) { e.preventDefault(); } }}>
+                                                Download PDF
+                                            </a>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <div className="text-sm text-slate-500">No PDFs available for this section yet.</div>
+                            )}
+                        </div>
                     )
                 ) : (
                     // Intermediate Level: Display folder links

@@ -1,18 +1,27 @@
 import express from 'express';
 import User from '../models/User.js';
 import verifyToken from '../middleware/auth.js';
+import { isDbConnected } from '../db.js';
 
 const router = express.Router();
 
 // Add a test result for the authenticated user
 router.post('/add', verifyToken, async (req, res) => {
   try {
-    const { category, score, rank } = req.body;
+    if (!isDbConnected()) {
+      return res.status(503).json({ message: 'Database unavailable. Please try again shortly.' });
+    }
+  const { category, score, paperId } = req.body;
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    // Block Admin users from taking tests
+    if (user.role === 'Admin') {
+      return res.status(403).json({ message: 'Admins cannot take tests' });
+    }
 
     // Do not persist practice/tests meant only for practice
     if (category && /practice/i.test(category)) {
@@ -20,7 +29,7 @@ router.post('/add', verifyToken, async (req, res) => {
       return res.json({ message: 'Practice tests are not recorded', entry: null, testHistory: user.testHistory || [] });
     }
 
-    const entry = { category, score: Number(score || 0), rank: rank || null, date: new Date() };
+  const entry = { category, paperId: paperId || undefined, score: Number(score || 0), date: new Date() };
 
     // Atomic insert: only push the new entry if the latest entry is not a duplicate
     const cutoff = new Date(Date.now() - 60 * 1000); // 1 minute
@@ -49,21 +58,36 @@ router.post('/add', verifyToken, async (req, res) => {
 
     res.json({ message: 'Test result saved', entry, testHistory: updated.testHistory });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error in POST /api/tests/add:', err && err.message ? err.message : err);
+    const msg = /timedout|timed out|etimedout|reset/i.test(String(err && err.message))
+      ? 'Database timeout. Please try again.'
+      : 'Server error';
+    res.status(500).json({ message: msg });
   }
 });
 
 // Get test history for authenticated user
 router.get('/', verifyToken, async (req, res) => {
   try {
+    if (!isDbConnected()) {
+      return res.status(200).json({ testHistory: [] });
+    }
     const userId = req.user?.id;
-    const user = await User.findById(userId).select('testHistory');
+    const user = await User.findById(userId).select('testHistory role');
     if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    // Admin users don't have test history
+    if (user.role === 'Admin') {
+      return res.json({ testHistory: [] });
+    }
+    
     res.json({ testHistory: user.testHistory || [] });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error in GET /api/tests:', err && err.message ? err.message : err);
+    const msg = /timedout|timed out|etimedout|reset/i.test(String(err && err.message))
+      ? 'Database timeout. Showing empty history.'
+      : 'Server error';
+    res.status(500).json({ message: msg, testHistory: [] });
   }
 });
 

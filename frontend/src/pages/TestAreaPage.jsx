@@ -105,9 +105,7 @@ const TestAreaPage = ({ navigate, setTestState, testState, addTestResult, select
          let score = 0;
          // Always compute score as 1 point per correct answer
          answers.forEach((ans, index) => { if(ans === bank[index].answer) score++; });
-         if(!isEarlyTermination) {
-            addTestResult(selectedCategory, score);
-         }
+            // Do not persist results here; TestResultPage will handle recording to server
          
          setTestState(prev => ({...prev, finished: true, score: score, selectedPaperNumber: prev.selectedPaperNumber}));
          navigate('test-result');

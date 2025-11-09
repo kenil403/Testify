@@ -20,60 +20,76 @@ const TestResultPage = ({ navigate, testState, resetTest, currentUser }) => {
             if (selectedCategory && /practice/i.test(selectedCategory)) return;
 
             let currentPaper = 'paper1';
+            let dbPaperId = null; // paperId as assigned by DB
             try {
                 if (selectedCategory === 'Mechanical Engineering') {
                     // For Mechanical Engineering, get the paper number from localStorage
                     const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_mechanical_paper`) || '1';
                     currentPaper = `mechanical-paper-${paperNumber}`;
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper_Mechanical Engineering`) || null;
                 } else if (selectedCategory === 'Computer Engineering') {
                     // For Computer Engineering, get the paper number from localStorage
                     const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_computer_paper`) || '1';
                     currentPaper = `computer-paper-${paperNumber}`;
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper_Computer Engineering`) || null;
                 } else if (selectedCategory === 'Electronics & Communication') {
                     const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_electronics_paper`) || '1';
                     currentPaper = `electronics-paper-${paperNumber}`;
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper_Electronics & Communication`) || null;
                 } else if (selectedCategory === 'Chemical Engineering') {
                     const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_chemical_paper`) || '1';
                     currentPaper = `chemical-paper-${paperNumber}`;
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper_Chemical Engineering`) || null;
                 } else if (selectedCategory === 'Civil Engineering') {
                     const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_civil_paper`) || '1';
                     currentPaper = `civil-paper-${paperNumber}`;
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper_Civil Engineering`) || null;
                 } else if (selectedCategory === 'Electrical Engineering') {
                     const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_electrical_paper`) || '1';
                     currentPaper = `electrical-paper-${paperNumber}`;
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper_Electrical Engineering`) || null;
                 } else if (selectedCategory === 'Technical') {
                     const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_technical_paper`) || '1';
                     currentPaper = `tech-paper${paperNumber}`;
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper_Technical`) || null;
                 } else {
                     currentPaper = getUserAssignedPaper(currentUser?.email) || 'paper1';
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper`) || null;
                 }
             } catch (e) {
                 // fallback
                 if (selectedCategory === 'Mechanical Engineering') {
                     const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_mechanical_paper`) || '1';
                     currentPaper = `mechanical-paper-${paperNumber}`;
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper_Mechanical Engineering`) || null;
                 } else if (selectedCategory === 'Computer Engineering') {
                     const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_computer_paper`) || '1';
                     currentPaper = `computer-paper-${paperNumber}`;
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper_Computer Engineering`) || null;
                 } else if (selectedCategory === 'Electronics & Communication') {
                     const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_electronics_paper`) || '1';
                     currentPaper = `electronics-paper-${paperNumber}`;
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper_Electronics & Communication`) || null;
                 } else if (selectedCategory === 'Chemical Engineering') {
                     const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_chemical_paper`) || '1';
                     currentPaper = `chemical-paper-${paperNumber}`;
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper_Chemical Engineering`) || null;
                 } else if (selectedCategory === 'Civil Engineering') {
                     const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_civil_paper`) || '1';
                     currentPaper = `civil-paper-${paperNumber}`;
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper_Civil Engineering`) || null;
                 } else if (selectedCategory === 'Electrical Engineering') {
                     const paperNumber = localStorage.getItem(`user_${currentUser.email}_current_electrical_paper`) || '1';
                     currentPaper = `electrical-paper-${paperNumber}`;
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper_Electrical Engineering`) || null;
                 } else {
                     currentPaper = localStorage.getItem(`user_${currentUser.email}_current_paper`) || 'paper1';
+                    dbPaperId = localStorage.getItem(`user_${currentUser.email}_current_paper`) || null;
                 }
             }
 
             try {
-                await recordTestCompletion(currentUser.email, currentPaper, score, selectedCategory, testState.testId);
+                await recordTestCompletion(currentUser.email, dbPaperId || currentPaper, score, selectedCategory, testState.testId);
             } catch (err) {
                 console.warn('Could not record test completion to server.', err);
             }
@@ -111,123 +127,153 @@ const TestResultPage = ({ navigate, testState, resetTest, currentUser }) => {
     const [showSolutions, setShowSolutions] = useState(false);
     const answeredCount = (answers || []).filter(a => a !== null).length;
   const isTechnical = (selectedCategory === 'Technical');
-  const isMechanical = (selectedCategory === 'Mechanical Engineering');
+    const isMechanical = (selectedCategory === 'Mechanical Engineering');
+
+    // Derive the proper solutions title for all categories/courses
+    const solutionsTitle = (() => {
+        if (selectedCategory === 'Technical') return '🧪 Technical Solutions';
+        if (selectedCategory === 'Mechanical Engineering') {
+            const suffix = testState?.selectedPaperNumber === 2
+                ? '- Paper 2'
+                : testState?.selectedPaperNumber === 3
+                    ? '- Paper 3'
+                    : testState?.selectedPaperNumber === 4
+                        ? '- Paper 4'
+                        : testState?.selectedPaperNumber === 5
+                            ? '- Paper 5'
+                            : '';
+            return `🔧 Mechanical Engineering Solutions ${suffix}`;
+        }
+        if (selectedCategory === 'Computer Engineering') return '💻 Computer Engineering Solutions';
+        if (selectedCategory === 'Electronics & Communication') return '📡 Electronics & Communication Solutions';
+        if (selectedCategory === 'Chemical Engineering') return '⚗️ Chemical Engineering Solutions';
+        if (selectedCategory === 'Civil Engineering') return '🏗️ Civil Engineering Solutions';
+        if (selectedCategory === 'Electrical Engineering') return '⚡ Electrical Engineering Solutions';
+        // Default to Aptitude when category doesn't match above
+        return '📖 Aptitude Solutions';
+    })();
 
     if (showSolutions) {
         return (
-             <div className="container mx-auto">
-                 <button onClick={() => setShowSolutions(false)} className="p-2 rounded-full hover:bg-slate-200 transition-colors mb-8">
-                    <ChevronLeftIcon />
-                </button>
-                
-                <div className="text-center mb-12">
-        <h1 className="text-5xl font-extrabold text-slate-800">
-            {isTechnical ? '🧪 Technical Solutions' :
-             isMechanical ? `🔧 Mechanical Engineering Solutions ${testState?.selectedPaperNumber === 2 ? '- Paper 2' : testState?.selectedPaperNumber === 3 ? '- Paper 3' : testState?.selectedPaperNumber === 4 ? '- Paper 4' : ''}` :
-             '📖 Aptitude Solutions'}
-        </h1>
-                    <p className="text-lg text-slate-500 mt-4 max-w-3xl mx-auto">
-                        Complete question paper with answers and detailed explanations. Review all {bankData.length} questions with solutions.
-                    </p>
-                    <div className="mt-4 text-sm text-slate-600">
-                        <span className="mr-4">Answered: <span className="font-semibold text-slate-800">{answeredCount}</span> / {bankData.length}</span>
-                        <span>Correct: <span className="font-semibold text-green-700">{score}</span></span>
+            <div className="min-h-screen flex flex-col bg-slate-50">
+                {/* Sticky Header: preserve original text and structure */}
+                <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-slate-200">
+                    <div className="container mx-auto px-4 py-4">
+                        <button onClick={() => setShowSolutions(false)} className="p-2 rounded-full hover:bg-slate-200 transition-colors mb-8">
+                            <ChevronLeftIcon />
+                        </button>
+
+                        <div className="text-center mb-0">
+                            <h1 className="text-5xl font-extrabold text-slate-800">{solutionsTitle}</h1>
+                            <p className="text-lg text-slate-500 mt-4 max-w-3xl mx-auto">
+                                Complete question paper with answers and detailed explanations. Review all {bankData.length} questions with solutions.
+                            </p>
+                            <div className="mt-4 text-sm text-slate-600">
+                                <span className="mr-4">Answered: <span className="font-semibold text-slate-800">{answeredCount}</span> / {bankData.length}</span>
+                                <span>Correct: <span className="font-semibold text-green-700">{score}</span></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div className="bg-white p-8 rounded-xl shadow-lg">
-                    <div className="space-y-8">
-                        {bankData.map((mcq, index) => (
-                            <div key={index} className="border border-slate-200 rounded-lg p-6 bg-slate-50/30">
-                                {/* Question Header */}
-                                <div className="flex items-center gap-3 mb-4">
-                                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
-                                        Q{index + 1}
-                                    </span>
-                                    <span className="px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800">
-                                        ✅ Correct Answer Available
-                                    </span>
-                                    {markedForReview[index] && (
-                                        <span className="px-3 py-1 rounded-full text-sm font-bold bg-amber-100 text-amber-800">
-                                            🔖 Marked for Review
-                                        </span>
-                                    )}
-                                </div>
+                {/* Scrollable MCQ content */}
+                <div className="flex-1 min-h-0">
+                    <div className="container mx-auto h-full overflow-y-auto px-4 py-6">
+                        <div className="bg-white p-8 rounded-xl shadow-lg">
+                            <div className="space-y-8">
+                                {bankData.map((mcq, index) => (
+                                    <div key={index} className="border border-slate-200 rounded-lg p-6 bg-slate-50/30">
+                                        {/* Question Header */}
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
+                                                Q{index + 1}
+                                            </span>
+                                            <span className="px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800">
+                                                ✅ Correct Answer Available
+                                            </span>
+                                            {markedForReview[index] && (
+                                                <span className="px-3 py-1 rounded-full text-sm font-bold bg-amber-100 text-amber-800">
+                                                    🔖 Marked for Review
+                                                </span>
+                                            )}
+                                        </div>
 
-                                {/* Question */}
-                                <div className="mb-6">
-                                    <p className="text-lg font-medium text-slate-800 leading-relaxed">
-                                        {mcq.question}
-                                    </p>
-                                </div>
+                                        {/* Question */}
+                                        <div className="mb-6">
+                                            <p className="text-lg font-medium text-slate-800 leading-relaxed">
+                                                {mcq.question}
+                                            </p>
+                                        </div>
 
-                                {/* Options */}
-                                <div className="space-y-3 mb-6">
-                                    {mcq.options.map((option, optIndex) => {
-                                        const optionLetter = String.fromCharCode(65 + optIndex); // A, B, C, D
-                                        const isCorrectAnswer = option === mcq.answer;
-                                        const userAnswer = answers[index];
-                                        const isUserSelection = userAnswer === option;
-                                        const isUserWrongSelection = isUserSelection && !isCorrectAnswer;
-                                        
-                                        return (
-                                            <div 
-                                                key={option} 
-                                                className={`p-3 rounded-lg border-2 transition-all ${
-                                                    isCorrectAnswer 
-                                                        ? 'bg-green-100 border-green-300 text-green-800' 
-                                                        : isUserWrongSelection
-                                                            ? 'bg-red-100 border-red-300 text-red-800'
-                                                            : 'bg-white border-slate-200 text-slate-700'
-                                                }`}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <span className={`font-bold text-sm ${
-                                                        isCorrectAnswer ? 'text-green-700' : isUserWrongSelection ? 'text-red-700' : 'text-slate-500'
-                                                    }`}>
-                                                        {optionLetter})
-                                                    </span>
-                                                    <span className="flex-1">{option}</span>
-                                                    {isCorrectAnswer && (
-                                                        <span className="text-green-600 font-bold">
-                                                            ✅ Correct Answer
-                                                        </span>
-                                                    )}
-                                                    {!isUserWrongSelection && isUserSelection && isCorrectAnswer && (
-                                                        <span className="text-green-700 font-semibold">✓ Your Answer</span>
-                                                    )}
-                                                    {isUserWrongSelection && (
-                                                        <span className="text-red-600 font-bold">
-                                                            ✗ Your Answer
-                                                        </span>
-                                                    )}
-                                                </div>
+                                        {/* Options */}
+                                        <div className="space-y-3 mb-6">
+                                            {mcq.options.map((option, optIndex) => {
+                                                const optionLetter = String.fromCharCode(65 + optIndex); // A, B, C, D
+                                                const isCorrectAnswer = option === mcq.answer;
+                                                const userAnswer = answers[index];
+                                                const isUserSelection = userAnswer === option;
+                                                const isUserWrongSelection = isUserSelection && !isCorrectAnswer;
+
+                                                return (
+                                                    <div
+                                                        key={option}
+                                                        className={`p-3 rounded-lg border-2 transition-all ${
+                                                            isCorrectAnswer
+                                                                ? 'bg-green-100 border-green-300 text-green-800'
+                                                                : isUserWrongSelection
+                                                                    ? 'bg-red-100 border-red-300 text-red-800'
+                                                                    : 'bg-white border-slate-200 text-slate-700'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <span className={`font-bold text-sm ${
+                                                                isCorrectAnswer ? 'text-green-700' : isUserWrongSelection ? 'text-red-700' : 'text-slate-500'
+                                                            }`}>
+                                                                {optionLetter})
+                                                            </span>
+                                                            <span className="flex-1">{option}</span>
+                                                            {isCorrectAnswer && (
+                                                                <span className="text-green-600 font-bold">
+                                                                    ✅ Correct Answer
+                                                                </span>
+                                                            )}
+                                                            {!isUserWrongSelection && isUserSelection && isCorrectAnswer && (
+                                                                <span className="text-green-700 font-semibold">✓ Your Answer</span>
+                                                            )}
+                                                            {isUserWrongSelection && (
+                                                                <span className="text-red-600 font-bold">
+                                                                    ✗ Your Answer
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Explanation */}
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                            <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                                                <span>💡</span> Solution & Explanation:
+                                            </h4>
+                                            <p className="text-blue-900 leading-relaxed">
+                                                {mcq.explanation}
+                                            </p>
+
+                                            {/* Show Answer Highlight */}
+                                            <div className="mt-3 p-2 bg-green-100 border border-green-300 rounded">
+                                                <span className="text-green-800 font-semibold">
+                                                    Answer: {mcq.answer}
+                                                </span>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Explanation */}
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                    <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
-                                        <span>💡</span> Solution & Explanation:
-                                    </h4>
-                                    <p className="text-blue-900 leading-relaxed">
-                                        {mcq.explanation}
-                                    </p>
-                                    
-                                    {/* Show Answer Highlight */}
-                                    <div className="mt-3 p-2 bg-green-100 border border-green-300 rounded">
-                                        <span className="text-green-800 font-semibold">
-                                            Answer: {mcq.answer}
-                                        </span>
+                                        </div>
                                     </div>
-                                </div>
+                                ))}
+                                {bankData.length === 0 && (
+                                    <div className="text-center text-slate-600">No solutions available for this attempt.</div>
+                                )}
                             </div>
-                        ))}
-                        {bankData.length === 0 && (
-                            <div className="text-center text-slate-600">No solutions available for this attempt.</div>
-                        )}
+                        </div>
                     </div>
                 </div>
             </div>

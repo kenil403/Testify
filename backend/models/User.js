@@ -7,16 +7,19 @@ const userSchema = new mongoose.Schema({
   mobile: { type: String },
   role: { type: String, enum: ['Student', 'Admin'], default: 'Student' },
   department: { type: String },
-  resetPasswordToken: { type: String },
-  resetPasswordExpires: { type: Date },
   testHistory: [
     {
       category: String,
+      // The paper id for this attempt, e.g., 'paper1'
+      paperId: String,
       score: Number,
       date: { type: Date, default: Date.now },
-      rank: Number
+      // Duration spent on the test in minutes
+      timeSpent: Number,
+      // Total questions in the test to support analytics like accuracy
+      totalQuestions: Number
     }
-  ],
+  ]
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);

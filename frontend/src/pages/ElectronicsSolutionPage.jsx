@@ -29,7 +29,7 @@ const ElectronicsSolutionPage = ({ navigate, currentUser, testState }) => {
   const bank = paper?.questions || [];
 
   return (
-    <div className="container mx-auto">
+    <div className="container mx-auto min-h-screen flex flex-col">
       <div className="mb-6">
         <button
           onClick={() => navigate('test-result')}
@@ -38,16 +38,19 @@ const ElectronicsSolutionPage = ({ navigate, currentUser, testState }) => {
           <ChevronLeftIcon />
         </button>
       </div>
-
-      <div className="text-center mb-12">
+      {/* Fixed header (non-scrolling) */}
+      <div className="text-center sticky top-0 bg-white z-10 pt-4 pb-4 border-b mb-4">
         <h1 className="text-5xl font-extrabold text-slate-800">📡 Electronics & Communication Solutions</h1>
         <p className="text-lg text-slate-500 mt-4 max-w-3xl mx-auto">
           Complete question paper with answers and detailed explanations. Review all {bank.length} questions with solutions.
         </p>
       </div>
 
-      <div className="bg-white p-8 rounded-xl shadow-lg">
-        <div className="space-y-8">
+      {/* Scrollable MCQ content filling remaining height */}
+      <div className="flex-1 min-h-0">
+        <div className="bg-white rounded-xl shadow-lg h-full flex flex-col">
+          <div className="p-8 overflow-y-auto">
+            <div className="space-y-8">
           {bank.map((mcq, index) => (
             <div key={index} className="border border-slate-200 rounded-lg p-6 bg-slate-50/30">
               <div className="flex items-center gap-3 mb-4">
@@ -88,6 +91,8 @@ const ElectronicsSolutionPage = ({ navigate, currentUser, testState }) => {
           {bank.length === 0 && (
             <div className="text-center text-slate-600">No solutions available for this paper yet.</div>
           )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

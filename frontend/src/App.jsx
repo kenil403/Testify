@@ -1,34 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Suspense, lazy } from "react";
 import Navbar from "./components/layout/Navbar.jsx";
 import Footer from "./components/layout/Footer.jsx";
 
-// Pages
-import HomePage from "./pages/HomePage.jsx";
-import AuthPage from "./pages/AuthPage.jsx";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
-import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
+// Pages (lazy-loaded to reduce initial bundle size)
+const HomePage = lazy(() => import("./pages/HomePage.jsx"));
+const AuthPage = lazy(() => import("./pages/AuthPage.jsx"));
 import apiAuth from "./api/auth.js";
 import apiTests from "./api/tests.js";
-import LearnPage from "./pages/LearnPage.jsx";
-import LearnContentPage from "./pages/LearnContentPage.jsx";
-import TestSelectionPage from "./pages/TestSelectionPage.jsx";
-import DepartmentSelectionPage from "./pages/DepartmentSelection.jsx";
-import TestInstructionsPage from "./pages/TestInstructionsPage.jsx";
-import TestAreaPage from "./pages/TestAreaPage.jsx";
-import TestResultPage from "./pages/TestResultPage.jsx";
-import DashboardPage from "./pages/DashboardPage.jsx";
-import ProfilePage from "./pages/ProfilePage.jsx";
-import AdminDashboard from "./Admin/AdminDashboard.jsx";
-import AboutUsPage from "./pages/AboutUsPage.jsx";
-import ContactUsPage from "./pages/ContactUsPage.jsx";
-import PrivacyPolicyPage from "./pages/PrivacyPolicyPage.jsx";
-import TechnicalSolutionPage from "./pages/TechnicalSolutionPage.jsx";
-import MechanicalSolutionPage from "./pages/MechanicalSolutionPage.jsx";
-import ComputerSolutionPage from "./pages/ComputerSolutionPage.jsx";
-import ElectronicsSolutionPage from "./pages/ElectronicsSolutionPage.jsx";
-import ChemicalSolutionPage from "./pages/ChemicalSolutionPage.jsx";
-import CivilSolutionPage from "./pages/CivilSolutionPage.jsx";
-import ElectricalSolutionPage from "./pages/ElectricalSolutionPage.jsx";
+const LearnPage = lazy(() => import("./pages/LearnPage.jsx"));
+const LearnContentPage = lazy(() => import("./pages/LearnContentPage.jsx"));
+const TestSelectionPage = lazy(() => import("./pages/TestSelectionPage.jsx"));
+const DepartmentSelectionPage = lazy(() => import("./pages/DepartmentSelection.jsx"));
+const TestInstructionsPage = lazy(() => import("./pages/TestInstructionsPage.jsx"));
+const TestAreaPage = lazy(() => import("./pages/TestAreaPage.jsx"));
+const TestResultPage = lazy(() => import("./pages/TestResultPage.jsx"));
+const DashboardPage = lazy(() => import("./pages/DashboardPage.jsx"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage.jsx"));
+const AdminDashboard = lazy(() => import("./Admin/AdminDashboard.jsx"));
+const AboutUsPage = lazy(() => import("./pages/AboutUsPage.jsx"));
+const ContactUsPage = lazy(() => import("./pages/ContactUsPage.jsx"));
+const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage.jsx"));
+const TechnicalSolutionPage = lazy(() => import("./pages/TechnicalSolutionPage.jsx"));
+const MechanicalSolutionPage = lazy(() => import("./pages/MechanicalSolutionPage.jsx"));
+const ComputerSolutionPage = lazy(() => import("./pages/ComputerSolutionPage.jsx"));
+const ElectronicsSolutionPage = lazy(() => import("./pages/ElectronicsSolutionPage.jsx"));
+const ChemicalSolutionPage = lazy(() => import("./pages/ChemicalSolutionPage.jsx"));
+const CivilSolutionPage = lazy(() => import("./pages/CivilSolutionPage.jsx"));
+const ElectricalSolutionPage = lazy(() => import("./pages/ElectricalSolutionPage.jsx"));
 
 export default function App() {
   const [page, setPage] = useState("home");
@@ -46,8 +45,75 @@ export default function App() {
 
   const navigate = (newPage) => {
     setPage(newPage);
+    try { sessionStorage.setItem('last_page', newPage); } catch {}
     window.scrollTo(0, 0);
   };
+
+  // Rehydrate auth state on refresh from sessionStorage
+  useEffect(() => {
+    const token = apiAuth.getToken();
+    const storedUser = apiAuth.getStoredUser ? apiAuth.getStoredUser() : null;
+
+    // If no token, start at home and do not rehydrate a user
+    if (!token) {
+      setCurrentUser(null);
+      setPage('home');
+      try { if (window.location.pathname !== '/') window.history.replaceState({}, '', '/'); } catch {}
+      return;
+    }
+
+    // If token exists, optimistically hydrate from stored user (if any), then validate
+    if (token && storedUser) {
+      setCurrentUser(storedUser);
+      const last = (() => { try { return sessionStorage.getItem('last_page'); } catch { return null; } })();
+      const safeLast = (last === 'admin-dashboard' && storedUser.role !== 'Admin') ? null : last;
+      const desiredPre = safeLast || (storedUser.role === 'Admin' ? 'admin-dashboard' : 'dashboard');
+      setPage(desiredPre);
+    }
+
+    // If token exists, validate and refresh from DB; otherwise skip
+    if (token) {
+      (async () => {
+        try {
+          const data = await apiAuth.me();
+          if (data && data.user) {
+            setCurrentUser(data.user);
+            if (apiAuth.setStoredUser) apiAuth.setStoredUser(data.user);
+
+            // After authenticating, prefer last page if valid for role; otherwise go to role default
+            const last = (() => { try { return sessionStorage.getItem('last_page'); } catch { return null; } })();
+            const safeLastAfter = (last === 'admin-dashboard' && data.user.role !== 'Admin') ? null : last;
+            const desired = safeLastAfter || (data.user.role === 'Admin' ? 'admin-dashboard' : 'dashboard');
+            setPage(desired);
+          }
+        } catch (e) {
+          const status = e?.response?.status;
+          if (status === 401 || status === 403) {
+            console.warn('Session invalid, clearing auth');
+            if (apiAuth.clearAuth) apiAuth.clearAuth();
+            setCurrentUser(null);
+            setPage('auth');
+            return;
+          } else {
+            console.warn('Session validation failed (network/server). Keeping existing session.');
+          }
+        }
+        try {
+          const res = await apiTests.getTestHistory();
+          if (res && Array.isArray(res.testHistory)) {
+            const email = (apiAuth.getStoredUser && apiAuth.getStoredUser()?.email) || storedUser?.email;
+            if (email) localStorage.setItem(`user_${email}_test_history`, JSON.stringify(res.testHistory));
+            setCurrentUser(prev => ({ ...prev, testHistory: res.testHistory }));
+          }
+        } catch (e) {
+          console.warn('Could not refresh test history on rehydrate', e);
+        }
+      })();
+    }
+
+    // No path-based routing; nothing to listen to here
+    return () => {};
+  }, []);
 
   const resetTestState = () => {
     setTestState({
@@ -91,23 +157,12 @@ export default function App() {
   };
 
   const handleLogin = async (email, password) => {
-    // Admin local fallback
-    if (email === "admin123@gmail.com" && password === "Admin@123") {
-      setCurrentUser({ 
-        name: "Admin User", 
-        email: "admin123@gmail.com", 
-        department: "Administration",
-        mobile: "9876543200",
-        role: "Admin"
-      });
-      navigate("admin-dashboard");
-      return;
-    }
-
     try {
       const data = await apiAuth.login({ email, password });
       apiAuth.setToken(data.token);
       setCurrentUser(data.user);
+      if (apiAuth.setStoredUser) apiAuth.setStoredUser(data.user);
+      
       // Fetch and cache test history for paper assignment and dashboard
       try {
         const res = await apiTests.getTestHistory();
@@ -119,8 +174,13 @@ export default function App() {
       } catch (e) {
         console.warn('Could not fetch test history after login', e);
       }
-      if (data.user && data.user.role === 'Admin') navigate('admin-dashboard');
-      else navigate('dashboard');
+      
+      // Redirect based on role: Admin → admin-dashboard, Student → dashboard
+      if (data.user && data.user.role === 'Admin') {
+        navigate('admin-dashboard');
+      } else {
+        navigate('dashboard');
+      }
     } catch (err) {
       console.error(err);
       setAppServerError(err?.response?.data?.message || 'Login failed');
@@ -129,9 +189,17 @@ export default function App() {
 
   const handleRegister = async (name, email, password, department, mobile, role) => {
     try {
-      const data = await apiAuth.register({ name, email, password, department, mobile, role });
+      const payload = { name, email, password, mobile, role };
+      // Only include department for Student role
+      if (role === 'Student' && department) {
+        payload.department = department;
+      }
+      
+      const data = await apiAuth.register(payload);
       apiAuth.setToken(data.token);
       setCurrentUser(data.user);
+      if (apiAuth.setStoredUser) apiAuth.setStoredUser(data.user);
+      
       // Try to fetch and cache history as well
       try {
         const res = await apiTests.getTestHistory();
@@ -142,8 +210,13 @@ export default function App() {
       } catch (e) {
         console.warn('Could not fetch test history after register', e);
       }
-      if (data.user && data.user.role === 'Admin') navigate('admin-dashboard');
-      else navigate('dashboard');
+      
+      // Redirect based on role: Admin → admin-dashboard, Student → dashboard
+      if (data.user && data.user.role === 'Admin') {
+        navigate('admin-dashboard');
+      } else {
+        navigate('dashboard');
+      }
     } catch (err) {
       console.error(err);
       const msg = err?.response?.data?.message || (err?.response?.data?.errors ? err.response.data.errors.map(e=>e.msg).join(', ') : 'Register failed');
@@ -168,35 +241,27 @@ export default function App() {
 
   const handleLogout = () => {
     setCurrentUser(null);
+    try { sessionStorage.removeItem('last_page'); } catch {}
+    if (apiAuth.clearAuth) apiAuth.clearAuth(); else apiAuth.setToken(null);
     navigate("auth");
   };
 
   const renderPage = () => {
-    // If admin is logged in, only allow admin dashboard
-    if (currentUser && currentUser.role === "Admin") {
-      if (page === "admin-dashboard") {
-        return (
-          <AdminDashboard 
-            navigate={navigate} 
-            adminUser={currentUser} 
-            handleLogout={handleLogout}
-          />
-        );
-      } else {
-        // Redirect admin to admin dashboard for any other page
-        navigate("admin-dashboard");
-        return null;
-      }
+    // Render admin dashboard only when specifically on that page; don't force-redirect on refresh
+    if (page === "admin-dashboard" && currentUser && currentUser.role === "Admin") {
+      return (
+        <AdminDashboard 
+          navigate={navigate} 
+          adminUser={currentUser} 
+          handleLogout={handleLogout}
+        />
+      );
     }
 
     if (page.startsWith("learn-")) {
       const pathString = page.substring(6);
       const pathParts = pathString ? pathString.split("__").map(decodeURIComponent) : [];
       return <LearnContentPage pathParts={pathParts} navigate={navigate} startPracticeTest={startPracticeTest} />;
-    }
-    if (page.startsWith("reset-password/")) {
-      const token = page.substring(15); // Extract token from "reset-password/token"
-      return <ResetPasswordPage navigate={navigate} token={token} />;
     }
     switch (page) {
       case "home": return <HomePage navigate={navigate} />;
@@ -209,7 +274,6 @@ export default function App() {
           setAppServerError={setAppServerError}
         />
       );
-      case "forgot-password": return <ForgotPasswordPage navigate={navigate} />;
       case "profile": return (
         <ProfilePage 
           navigate={navigate} 
@@ -219,37 +283,102 @@ export default function App() {
         />
       );
       case "learn": return <LearnPage navigate={navigate} />;
-      case "test-selection": return <TestSelectionPage navigate={navigate} setTestState={setTestState} />;
-      case "department-selection": return <DepartmentSelectionPage navigate={navigate} startTest={(dept) => {
-        resetTestState();
-        setTestState({
-          started: false,
-          finished: false,
-          currentQuestion: 0,
-          answers: Array(10).fill(null),
-          markedForReview: Array(10).fill(false),
-          score: 0,
-          selectedCategory: dept
-        });
-        navigate("test-instructions");
-      }} />;
-      case "test-instructions": return <TestInstructionsPage navigate={navigate} testState={testState} setTestState={setTestState} currentUser={currentUser} />;
-      case "test-area": return <TestAreaPage navigate={navigate} testState={testState} setTestState={setTestState} addTestResult={addTestResult} selectedCategory={testState.selectedCategory || "Aptitude"} currentUser={currentUser} />;
-      case "test-result": return <TestResultPage 
-        navigate={navigate} 
-        testState={testState} 
-        currentUser={currentUser}
-        resetTest={() => setTestState({
-          started: false,
-          finished: false,
-          currentQuestion: 0,
-          answers: Array(10).fill(null),
-          markedForReview: Array(10).fill(false),
-          score: 0,
-          selectedPaperNumber: testState?.selectedPaperNumber
-        })}
-      />;
-      case "dashboard": return <DashboardPage navigate={navigate} user={currentUser} />;
+      case "test-selection":
+        // Block Admin users from accessing tests
+        if (currentUser?.role === 'Admin') {
+          alert('Admins cannot take tests. This feature is only for students.');
+          navigate('admin-dashboard');
+          return null;
+        }
+        // Allow browsing test selection without login; we'll enforce auth when proceeding to test
+        return <TestSelectionPage navigate={navigate} setTestState={setTestState} />;
+      case "department-selection":
+        // Block Admin users from accessing tests
+        if (currentUser?.role === 'Admin') {
+          alert('Admins cannot take tests. This feature is only for students.');
+          navigate('admin-dashboard');
+          return null;
+        }
+        return (
+          <DepartmentSelectionPage
+            navigate={navigate}
+            startTest={(dept) => {
+              setTestState({
+                started: false,
+                finished: false,
+                currentQuestion: 0,
+                answers: Array(10).fill(null),
+                markedForReview: Array(10).fill(false),
+                score: 0,
+                selectedCategory: dept
+              });
+              navigate("test-instructions");
+            }}
+          />
+        );
+      case "test-instructions":
+        // Block Admin users from accessing tests
+        if (currentUser?.role === 'Admin') {
+          alert('Admins cannot take tests. This feature is only for students.');
+          navigate('admin-dashboard');
+          return null;
+        }
+        return (
+          <TestInstructionsPage
+            navigate={navigate}
+            testState={testState}
+            setTestState={setTestState}
+            currentUser={currentUser}
+          />
+        );
+      case "test-area":
+        // Block Admin users from accessing tests
+        if (currentUser?.role === 'Admin') {
+          alert('Admins cannot take tests. This feature is only for students.');
+          navigate('admin-dashboard');
+          return null;
+        }
+        return (
+          <TestAreaPage
+            navigate={navigate}
+            testState={testState}
+            setTestState={setTestState}
+            addTestResult={addTestResult}
+            selectedCategory={testState.selectedCategory || "Aptitude"}
+            currentUser={currentUser}
+          />
+        );
+      case "test-result":
+        // Block Admin users from accessing tests
+        if (currentUser?.role === 'Admin') {
+          alert('Admins cannot take tests. This feature is only for students.');
+          navigate('admin-dashboard');
+          return null;
+        }
+        return (
+          <TestResultPage
+            navigate={navigate}
+            testState={testState}
+            currentUser={currentUser}
+            resetTest={() => setTestState({
+              started: false,
+              finished: false,
+              currentQuestion: 0,
+              answers: Array(10).fill(null),
+              markedForReview: Array(10).fill(false),
+              score: 0,
+              selectedPaperNumber: testState?.selectedPaperNumber
+            })}
+          />
+        );
+      case "dashboard":
+        // Block Admin users from accessing student dashboard
+        if (currentUser?.role === 'Admin') {
+          alert('Admins cannot access student dashboard. Redirecting to admin dashboard.');
+          navigate('admin-dashboard');
+          return null;
+        }
+        return <DashboardPage navigate={navigate} user={currentUser} />;
       case "about": return <AboutUsPage navigate={navigate} />;
       case "contact": return <ContactUsPage navigate={navigate} />;
       case "privacy-policy": return <PrivacyPolicyPage navigate={navigate} />;
