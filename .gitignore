@@ -1,0 +1,37 @@
+# Testify repository .gitignore
+
+# Database schema (not for remote tracking)
+schema.txt
+
+# Project description (local reference only)
+project-description.txt
+
+# Node modules
+node_modules/
+package-lock.json
+
+# Environment variables
+.env
+.env.local
+
+# Build outputs
+dist/
+build/
+
+# Logs
+*.log
+logs/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.bak
