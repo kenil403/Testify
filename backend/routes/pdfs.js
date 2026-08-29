@@ -13,22 +13,39 @@ function exactRegex(term) {
 
 function buildQuery(section, subsection) {
   const query = {};
+  
   if (section) {
     const aliases = new Set([section]);
     if (/^aptitude$/i.test(section) || /^apptitude$/i.test(section)) {
       aliases.add('Aptitude');
       aliases.add('Apptitude');
     }
+    // Match section exactly (case-insensitive)
     query.section = { $in: Array.from(aliases).map(exactRegex) };
   }
+  
   if (subsection) {
     const aliases = new Set([subsection]);
+    
+    // Add common aliases for known subsections
     if (/problems?\s+on\s+trains/i.test(subsection)) {
       aliases.add('Problems on Trains');
       aliases.add('Problem on Trains');
     }
+    if (/^number\s+series$/i.test(subsection)) {
+      aliases.add('Number Series');
+    }
+    if (/^letter\s+and\s+symbol\s+series$/i.test(subsection)) {
+      aliases.add('Letter and Symbol Series');
+    }
+    if (/^verbal\s+classification$/i.test(subsection)) {
+      aliases.add('Verbal Classification');
+    }
+    
+    // Match subsection exactly (case-insensitive)
     query.subsection = { $in: Array.from(aliases).map(exactRegex) };
   }
+  
   return query;
 }
 
@@ -58,7 +75,7 @@ router.get('/', verifyTokenFlexible, async (req, res) => {
     const { section, subsection } = req.query;
     const query = buildQuery(section, subsection);
     const docs = await LearningResources.find(query)
-      .sort({ createdAt: -1 })
+      .sort({ title: 1 })
       .select('_id title section subsection size contentType fileName createdAt updatedAt');
 
     res.json({

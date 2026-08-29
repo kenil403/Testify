@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -6,8 +7,16 @@ import { body, validationResult } from 'express-validator';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import { verifyToken } from '../middleware/auth.js';
+import { ensureDbReady } from '../db.js';
 
 const router = express.Router();
+
+function dbUnavailable(res) {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ message: 'Database unavailable. Please verify MongoDB Atlas connectivity and the MONGODB_URI value.' });
+  }
+  return null;
+}
 
 // Register
 router.post('/register',
@@ -25,6 +34,9 @@ router.post('/register',
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     try {
+      const dbErr = dbUnavailable(res);
+      if (dbErr) return dbErr;
+
       const { name, email, password, mobile, department, role } = req.body;
 
       const existing = await User.findOne({ email });
@@ -64,6 +76,9 @@ router.post('/login',
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     try {
+      const dbErr = dbUnavailable(res);
+      if (dbErr) return dbErr;
+
       const { email, password } = req.body;
 
       const user = await User.findOne({ email });
@@ -94,6 +109,9 @@ const transporter = nodemailer.createTransport({
 // Current user (validate token and fetch from DB)
 router.get('/me', verifyToken, async (req, res) => {
   try {
+    const dbErr = dbUnavailable(res);
+    if (dbErr) return dbErr;
+
     const user = await User.findById(req.user.id).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json({ user });
@@ -121,6 +139,9 @@ router.put('/update-profile',
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     try {
+      const dbErr = dbUnavailable(res);
+      if (dbErr) return dbErr;
+
       const { name, email, password, mobile, department } = req.body;
       const userId = req.user.id;
 

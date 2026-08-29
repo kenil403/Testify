@@ -10,7 +10,17 @@ mongoose.set('bufferCommands', false);
 
 let dbConnected = false;
 
-export const isDbConnected = () => dbConnected;
+export const isDbConnected = () => dbConnected || mongoose.connection.readyState === 1;
+
+export function ensureDbReady() {
+  if (!MONGO_URI) {
+    throw new Error('MongoDB connection string is missing. Set MONGODB_URI in backend/.env.');
+  }
+  if (mongoose.connection.readyState !== 1) {
+    throw new Error('MongoDB is not connected. Check the Atlas URI, network access, and DNS resolution.');
+  }
+  return true;
+}
 
 function attachConnectionLogging() {
   const redactedUri = MONGO_URI ? MONGO_URI.replace(/:(.*)@/, ':*****@') : 'not set';

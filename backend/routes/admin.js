@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
@@ -6,9 +7,18 @@ import { verifyToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
+function dbUnavailable(res) {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ message: 'Database unavailable. Please verify MongoDB Atlas connectivity and the MONGODB_URI value.' });
+  }
+  return null;
+}
+
 // Admin guard - requires authenticated user and Admin role
 async function requireAdmin(req, res, next) {
   try {
+    const dbErr = dbUnavailable(res);
+    if (dbErr) return dbErr;
     if (!req.user?.id) return res.status(401).json({ message: 'Unauthorized' });
     const me = await User.findById(req.user.id).select('role');
     if (!me || me.role !== 'Admin') return res.status(403).json({ message: 'Forbidden' });
@@ -93,6 +103,9 @@ router.post(
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     try {
+      const dbErr = dbUnavailable(res);
+      if (dbErr) return dbErr;
+
       const { name, email, password, mobile, department, role = 'Student' } = req.body;
       const exists = await User.findOne({ email });
       if (exists) return res.status(409).json({ message: 'User already exists' });
@@ -133,6 +146,9 @@ router.put(
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     try {
+      const dbErr = dbUnavailable(res);
+      if (dbErr) return dbErr;
+
       const { name, email, mobile, department, role, password } = req.body;
       const update = { name, email, mobile, department, role };
       if (password && password.trim()) {
@@ -158,6 +174,9 @@ router.put(
 // DELETE /api/admin/users/:id
 router.delete('/users/:id', verifyToken, requireAdmin, async (req, res) => {
   try {
+    const dbErr = dbUnavailable(res);
+    if (dbErr) return dbErr;
+
     const del = await User.findByIdAndDelete(req.params.id);
     if (!del) return res.status(404).json({ message: 'User not found' });
     

@@ -67,8 +67,15 @@ const LearnContentPage = ({ pathParts, navigate, startPracticeTest }) => {
                 return;
             }
             setLoadingGeneric(true);
-            const section = pathParts[0];
-            const subsection = pathParts[1];
+            // Handle 3-level paths for Reasoning (Reasoning > Logical Reasoning > Number Series)
+            let section, subsection;
+            if (pathParts.length >= 3 && pathParts[0].toLowerCase() === 'reasoning') {
+                section = pathParts[1];      // "Logical Reasoning"
+                subsection = pathParts[2];   // "Number Series"
+            } else {
+                section = pathParts[0];      // "Aptitude"
+                subsection = pathParts[1];   // "Time and Distance"
+            }
             const items = await listPdfs(section, subsection);
             if (!cancelled) { setGenericPdfs(items || []); setLoadingGeneric(false); }
         }

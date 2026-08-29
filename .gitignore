@@ -35,3 +35,7 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
+
+# Local project assets not needed in GitHub
+project-papers/
+photo/

@@ -38,11 +38,6 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
-// (Removed example protected route)
-
-// Add more routes here
-
-// Connect to MongoDB
 connectDB();
 
 // Auth routes
